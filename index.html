@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Launch Learning Curve</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Launch Learning Curve Simulator</h1>
+        <p class="lede">
+          Wright's Law: each time cumulative launches double, the modeled cost per launch falls by the
+          learning rate. <code>cost(n) = C₁ × n<sup>b</sup></code>, where <code>b = log₂(1 − learning rate)</code>.
+        </p>
+      </header>
+
+      <section class="controls" aria-label="Model inputs">
+        <div class="field">
+          <label for="lr-range">Learning rate (%)</label>
+          <div class="paired">
+            <input id="lr-range" type="range" min="0" max="50" step="0.1" />
+            <input id="lr-number" type="number" min="0" max="50" step="0.1" aria-label="Learning rate (%)" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="starting-cost">Starting launch cost, C₁ ($M)</label>
+          <input id="starting-cost" type="number" min="0" step="any" />
+        </div>
+
+        <div class="field">
+          <label for="max-launches">
+            Cumulative launches shown: <output id="max-launches-value" for="max-launches"></output>
+          </label>
+          <input id="max-launches" type="range" min="10" max="2048" step="1" />
+        </div>
+
+        <div class="field inline">
+          <input id="log-scale" type="checkbox" />
+          <label for="log-scale">Log–log axes (Wright's Law becomes a straight line)</label>
+        </div>
+
+        <button id="reset" type="button">Reset to defaults</button>
+        <p id="message" class="message" role="status" aria-live="polite"></p>
+      </section>
+
+      <section class="chart-panel" aria-label="Learning curve">
+        <svg id="chart" role="img" aria-label="Modeled cost per launch versus cumulative launches"></svg>
+        <p class="note">Dots mark each doubling of cumulative launches (1, 2, 4, 8, …).</p>
+
+        <dl class="readouts">
+          <div><dt>Progress ratio</dt><dd id="progress-ratio"></dd></div>
+          <div><dt>Exponent b</dt><dd id="exponent"></dd></div>
+          <div><dt id="final-label">Cost of final launch</dt><dd id="final-cost"></dd></div>
+          <div><dt>Reduction from launch 1</dt><dd id="reduction"></dd></div>
+        </dl>
+      </section>
+    </main>
+
+    <script type="module" src="src/main.js"></script>
+  </body>
+</html>
