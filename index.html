@@ -47,8 +47,17 @@
       </section>
 
       <section class="chart-panel" aria-label="Learning curve">
-        <svg id="chart" role="img" aria-label="Modeled cost per launch versus cumulative launches"></svg>
-        <p class="note">Dots mark each doubling of cumulative launches (1, 2, 4, 8, …).</p>
+        <svg id="chart" role="img" aria-label="Modeled cost per launch, and the equivalent cost per kilogram, versus cumulative launches"></svg>
+        <p class="note">
+          Dots mark each doubling of cumulative launches (1, 2, 4, 8, …). The right axis shows the same cost per
+          kilogram, assuming an illustrative Starship payload of 100 t (100,000 kg) per launch.
+        </p>
+
+        <div class="headline">
+          <p class="headline-label" id="per-kg-label">Modeled cost per kg</p>
+          <p class="headline-value" id="per-kg"></p>
+          <p class="headline-note">Launch cost ÷ 100,000 kg (illustrative Starship payload assumption)</p>
+        </div>
 
         <dl class="readouts">
           <div><dt>Progress ratio</dt><dd id="progress-ratio"></dd></div>

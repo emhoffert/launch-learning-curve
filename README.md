@@ -19,6 +19,19 @@ cost(n) = C₁ × nᵇ
 
 The $100M default starting cost is an illustrative round number, not real vehicle data.
 
+## Cost per kilogram (100,000 kg payload assumption)
+
+The chart's right axis and the highlighted readout show the same modeled cost as dollars per kilogram, using a fixed, **illustrative Starship payload assumption of 100 metric tonnes (100,000 kg) per launch**. It is not an input and not real vehicle data.
+
+```
+cost per kg ($) = launch cost ($M) × 1,000,000 ÷ 100,000 kg
+                = launch cost ($M) × 10
+```
+
+- A $100M launch is **$1,000/kg**. At the defaults, launch 1,024 is about **$86.62/kg**.
+- Because the conversion is a constant multiple, it doesn't change the curve's shape: the right axis lines up exactly with the left axis in both linear and log–log modes, and each doubling still cuts cost per kg by the learning rate.
+- Hovering a doubling dot shows both values, e.g. `Launch 4: $61.31M · $613.09/kg`.
+
 ## Controls
 
 | Control | Range | Default |
@@ -53,9 +66,9 @@ npm test
 ```
 index.html          Page markup
 styles.css          Layout and light/dark theme
-src/model.js        Wright's Law math (pure, no DOM)
+src/model.js        Wright's Law math and $/kg conversion (pure, no DOM)
 src/scale.js        Axis scales and tick helpers (pure, no DOM)
-src/format.js       Cost and percentage formatting (pure, no DOM)
+src/format.js       Cost, $/kg and percentage formatting (pure, no DOM)
 src/chart.js        Draws the chart as inline SVG
 src/main.js         Connects the controls to the model and chart
 tests/              Unit tests for model.js, scale.js and format.js

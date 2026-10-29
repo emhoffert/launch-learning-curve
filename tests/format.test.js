@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { formatCost, formatPercent } from '../src/format.js';
-import { unitCost } from '../src/model.js';
+import { formatCost, formatCostPerKg, formatPercent } from '../src/format.js';
+import { costPerKg, unitCost } from '../src/model.js';
 
 test('formatCost shows up to two decimals for costs of $1M or more', () => {
   assert.equal(formatCost(100), '$100M');
@@ -36,4 +36,20 @@ test('formatPercent adds decimals instead of rounding up to 100.0%', () => {
   assert.equal(formatPercent(0.9995117), '99.95%');
   assert.equal(formatPercent(0.99996), '99.996%');
   assert.equal(formatPercent(0.9994), '99.9%');
+});
+
+test('formatCostPerKg shows up to two decimals at $1/kg or more', () => {
+  assert.equal(formatCostPerKg(1000), '$1,000/kg');
+  assert.equal(formatCostPerKg(86.623), '$86.62/kg');
+  assert.equal(formatCostPerKg(1), '$1/kg');
+});
+
+test('formatCostPerKg keeps three significant digits below $1/kg', () => {
+  assert.equal(formatCostPerKg(0.5), '$0.5/kg');
+  // $1M start, 50% learning rate, launch 2,048: never "$0/kg".
+  assert.equal(formatCostPerKg(costPerKg(unitCost(2048, 1, 0.5))), '$0.00488/kg');
+});
+
+test('formatCostPerKg of the default final launch matches the README', () => {
+  assert.equal(formatCostPerKg(costPerKg(unitCost(1024, 100, 0.217))), '$86.62/kg');
 });

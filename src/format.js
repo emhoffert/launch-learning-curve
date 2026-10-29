@@ -20,3 +20,10 @@ export function formatPercent(fraction) {
   }
   return `${percent.toFixed(digits)}%`;
 }
+
+// Dollars per kilogram, e.g. 86.623 -> "$86.62/kg". Same precision rules as formatCost,
+// so values below $1/kg keep 3 significant digits instead of showing "$0/kg".
+export function formatCostPerKg(dollars) {
+  const formatter = Math.abs(dollars) >= 1 ? twoDecimals : threeSignificant;
+  return `$${formatter.format(dollars)}/kg`;
+}
