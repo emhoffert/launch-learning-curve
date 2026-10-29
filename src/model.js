@@ -11,6 +11,17 @@ export const DEFAULTS = Object.freeze({
   maxLaunches: 1024, // 2^10: ten doublings from launch 1
 });
 
+// Illustrative Starship payload assumption: 100 metric tonnes per launch. Fixed, not an input.
+export const PAYLOAD_KG = 100_000;
+
+// Launch cost in $M -> cost per kilogram in dollars, e.g. $100M / 100,000 kg = $1,000/kg.
+export function costPerKg(costMillions, payloadKg = PAYLOAD_KG) {
+  if (!Number.isFinite(payloadKg) || payloadKg <= 0) {
+    throw new RangeError(`Payload must be > 0 kg, got ${payloadKg}`);
+  }
+  return (costMillions * 1e6) / payloadKg;
+}
+
 export function exponentFromLearningRate(lr) {
   if (!Number.isFinite(lr) || lr < 0 || lr >= 1) {
     throw new RangeError(`Learning rate must be in [0, 1), got ${lr}`);

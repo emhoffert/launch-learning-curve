@@ -1,6 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DEFAULTS, exponentFromLearningRate, unitCost, generateCurve } from '../src/model.js';
+import {
+  DEFAULTS,
+  PAYLOAD_KG,
+  costPerKg,
+  exponentFromLearningRate,
+  unitCost,
+  generateCurve,
+} from '../src/model.js';
 
 const close = (actual, expected, tolerance = 1e-9) =>
   assert.ok(Math.abs(actual - expected) <= tolerance, `expected ${actual} ≈ ${expected}`);
@@ -67,4 +74,28 @@ test('unitCost and generateCurve reject invalid inputs', () => {
   assert.throws(() => unitCost(1, -5, 0.217), RangeError);
   assert.throws(() => generateCurve(100, 0.217, 0), RangeError);
   assert.throws(() => generateCurve(100, 0.217, 10.5), RangeError);
+});
+
+test('payload assumption is 100 t = 100,000 kg', () => {
+  assert.equal(PAYLOAD_KG, 100_000);
+});
+
+test('costPerKg divides launch cost in $M by 100,000 kg', () => {
+  assert.equal(costPerKg(100), 1000); // $100M -> $1,000/kg
+  assert.equal(costPerKg(1), 10);
+  assert.equal(costPerKg(0.1), 1);
+  close(costPerKg(unitCost(1024, 100, 0.217)), 1000 * 0.783 ** 10);
+});
+
+test('costPerKg is proportional, so ratios between launches are unchanged', () => {
+  for (const n of [1, 5, 50, 500]) {
+    close(costPerKg(unitCost(2 * n, 100, 0.217)) / costPerKg(unitCost(n, 100, 0.217)), 0.783);
+  }
+});
+
+test('costPerKg accepts another payload and rejects non-positive ones', () => {
+  assert.equal(costPerKg(100, 50_000), 2000);
+  for (const kg of [0, -1, NaN]) {
+    assert.throws(() => costPerKg(100, kg), RangeError);
+  }
 });

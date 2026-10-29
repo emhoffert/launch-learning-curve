@@ -1,8 +1,8 @@
 // Wires the controls to the model and chart. Every input event redraws immediately.
 
-import { DEFAULTS, exponentFromLearningRate, generateCurve } from './model.js';
+import { DEFAULTS, costPerKg, exponentFromLearningRate, generateCurve } from './model.js';
 import { renderChart } from './chart.js';
-import { formatCost, formatPercent } from './format.js';
+import { formatCost, formatCostPerKg, formatPercent } from './format.js';
 
 const LR_MAX_PERCENT = 50;
 const LAUNCHES_MIN = 10;
@@ -27,6 +27,8 @@ const readouts = {
   finalLabel: $('final-label'),
   finalCost: $('final-cost'),
   reduction: $('reduction'),
+  perKgLabel: $('per-kg-label'),
+  perKg: $('per-kg'),
 };
 
 // Returns validated inputs, or { error } describing the first problem found.
@@ -70,6 +72,8 @@ function update() {
   readouts.finalLabel.textContent = `Cost of launch ${maxLaunches.toLocaleString('en-US')}`;
   readouts.finalCost.textContent = formatCost(finalCost);
   readouts.reduction.textContent = formatPercent(1 - finalCost / startingCost);
+  readouts.perKgLabel.textContent = `Modeled cost per kg at launch ${maxLaunches.toLocaleString('en-US')}`;
+  readouts.perKg.textContent = formatCostPerKg(costPerKg(finalCost));
 }
 
 function setDefaults() {

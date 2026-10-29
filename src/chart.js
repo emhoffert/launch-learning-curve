@@ -1,12 +1,13 @@
 // Renders a learning curve into an <svg> element as plain SVG markup.
 
 import { linearScale, logScale, niceTicks, logTicks } from './scale.js';
-import { formatCost } from './format.js';
+import { formatCost, formatCostPerKg } from './format.js';
+import { costPerKg } from './model.js';
 
 // The viewBox matches the rendered width so text stays at its CSS size on any screen.
 const MIN_WIDTH = 280;
 const NARROW_WIDTH = 520;
-const MARGIN = { top: 20, right: 24, bottom: 56, left: 72 };
+const MARGIN = { top: 20, right: 72, bottom: 56, left: 72 };
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
 const formatTick = new Intl.NumberFormat('en-US', { maximumSignificantDigits: 4 }).format;
@@ -38,7 +39,9 @@ export function renderChart(svg, series, { logScale: useLog = false } = {}) {
   const plotTop = MARGIN.top;
   const plotBottom = height - MARGIN.bottom;
 
-  let x, y, xTicks, yTicks;
+  // The right axis shows the same costs in $/kg. It is a constant multiple of the left
+  // axis, so a scale over the converted domain lines up exactly with the left scale.
+  let x, y, yKg, xTicks, yTicks, yKgTicks;
   if (useLog) {
     // A flat curve (learning rate 0) has no vertical extent; pad it so the scale works.
     if (minCost === maxCost) [minCost, maxCost] = [minCost / 2, maxCost * 2];
@@ -47,11 +50,15 @@ export function renderChart(svg, series, { logScale: useLog = false } = {}) {
     // On narrow screens, label only powers of ten so x labels don't collide.
     xTicks = logTicks(1, maxLaunches).filter((t) => !narrow || Number.isInteger(Math.log10(t)));
     yTicks = logTicks(minCost, maxCost);
+    yKg = logScale([costPerKg(minCost), costPerKg(maxCost)], [plotBottom, plotTop]);
+    yKgTicks = logTicks(costPerKg(minCost), costPerKg(maxCost));
   } else {
     x = linearScale([0, maxLaunches], [plotLeft, plotRight]);
     y = linearScale([0, maxCost], [plotBottom, plotTop]);
     xTicks = niceTicks(0, maxLaunches, narrow ? 4 : 5);
     yTicks = niceTicks(0, maxCost);
+    yKg = linearScale([0, costPerKg(maxCost)], [plotBottom, plotTop]);
+    yKgTicks = niceTicks(0, costPerKg(maxCost));
   }
 
   svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
@@ -74,9 +81,15 @@ export function renderChart(svg, series, { logScale: useLog = false } = {}) {
       el('text', { x: plotLeft - 10, y: py + 4, 'text-anchor': 'end', class: 'tick-label' }, formatTick(t)),
     );
   }
+  for (const t of yKgTicks) {
+    axes.append(
+      el('text', { x: plotRight + 10, y: yKg(t) + 4, 'text-anchor': 'start', class: 'tick-label' }, formatTick(t)),
+    );
+  }
 
   axes.append(el('line', { x1: plotLeft, x2: plotRight, y1: plotBottom, y2: plotBottom, class: 'axis-line' }));
   axes.append(el('line', { x1: plotLeft, x2: plotLeft, y1: plotTop, y2: plotBottom, class: 'axis-line' }));
+  axes.append(el('line', { x1: plotRight, x2: plotRight, y1: plotTop, y2: plotBottom, class: 'axis-line' }));
   axes.append(
     el(
       'text',
@@ -97,6 +110,19 @@ export function renderChart(svg, series, { logScale: useLog = false } = {}) {
       'Cost per launch ($M)',
     ),
   );
+  axes.append(
+    el(
+      'text',
+      {
+        x: (plotTop + plotBottom) / 2,
+        y: -(width - 18),
+        transform: 'rotate(90)',
+        'text-anchor': 'middle',
+        class: 'axis-title',
+      },
+      'Cost per kg ($/kg, 100 t payload)',
+    ),
+  );
 
   const d = series.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(p.n).toFixed(2)},${y(p.cost).toFixed(2)}`).join('');
   const curve = el('path', { d, class: 'curve' });
@@ -106,7 +132,7 @@ export function renderChart(svg, series, { logScale: useLog = false } = {}) {
   for (const p of series) {
     if (!isPowerOfTwo(p.n)) continue;
     const dot = el('circle', { cx: x(p.n), cy: y(p.cost), r: 4 });
-    dot.append(el('title', {}, `Launch ${p.n.toLocaleString('en-US')}: ${formatCost(p.cost)}`));
+    dot.append(el('title', {}, `Launch ${p.n.toLocaleString('en-US')}: ${formatCost(p.cost)} · ${formatCostPerKg(costPerKg(p.cost))}`));
     doublings.append(dot);
   }
 
