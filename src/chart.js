@@ -24,9 +24,14 @@ function isPowerOfTwo(n) {
 }
 
 // series: [{ n, cost }, ...] with n running 1..N.
-export function renderChart(svg, series, { logScale: useLog = false } = {}) {
+// target (optional): { cost, perKg, launch } where cost is in $M and launch is the first
+// launch at or below it, or null when there is none to show (unreachable or past the limit).
+export function renderChart(svg, series, { logScale: useLog = false, target = null } = {}) {
   const maxLaunches = series[series.length - 1].n;
   const costs = series.map((p) => p.cost);
+  // Stretch the cost axis to include the target so its line is always on the chart.
+  // The launch axis keeps the user's selected range.
+  if (target) costs.push(target.cost);
   let minCost = Math.min(...costs);
   let maxCost = Math.max(...costs);
 
@@ -136,5 +141,85 @@ export function renderChart(svg, series, { logScale: useLog = false } = {}) {
     doublings.append(dot);
   }
 
-  svg.append(grid, axes, curve, doublings);
+  svg.append(grid);
+  if (target) svg.append(targetShading(series, target, x, y));
+  svg.append(axes, curve);
+  if (target) svg.append(targetOverlay(target, x, y, { plotLeft, plotRight, plotBottom }, maxLaunches));
+  svg.append(doublings);
+}
+
+// Shades the gap between the curve and the target line, from launch 1 through the target
+// launch (or the right edge when the target launch is past the displayed range).
+function targetShading(series, target, x, y) {
+  const group = el('g', { class: 'target-gap' });
+  if (target.launch === null || target.launch <= 1) return group;
+  const last = Math.min(target.launch, series.length);
+  const top = series
+    .slice(0, last)
+    .map((p, i) => `${i === 0 ? 'M' : 'L'}${x(p.n).toFixed(2)},${y(Math.max(p.cost, target.cost)).toFixed(2)}`)
+    .join('');
+  const ty = y(target.cost).toFixed(2);
+  group.append(el('path', { d: `${top}L${x(last).toFixed(2)},${ty}L${x(1).toFixed(2)},${ty}Z` }));
+  return group;
+}
+
+// Dashed target line with its label, plus a marker and vertical guide at the target launch
+// when it falls inside the displayed range.
+function targetOverlay(target, x, y, { plotLeft, plotRight, plotBottom }, maxLaunches) {
+  const group = el('g', { class: 'target' });
+  const ty = y(target.cost);
+  group.append(el('line', { x1: plotLeft, x2: plotRight, y1: ty, y2: ty, class: 'target-line' }));
+
+  // Label below the left end of the line, clear of the curve, which starts above the target.
+  // If the target is met at launch 1 the whole curve is below it, so label above the right end.
+  const metAtStart = target.launch === 1;
+  const room = plotBottom - ty;
+  const above = metAtStart || room < 18;
+  const targetText = `Target ${formatCostPerKg(target.perKg)}`;
+  group.append(
+    el(
+      'text',
+      {
+        x: metAtStart ? plotRight - 6 : plotLeft + 6,
+        y: above ? ty - 6 : ty + 15,
+        'text-anchor': metAtStart ? 'end' : 'start',
+        class: 'target-label',
+      },
+      targetText,
+    ),
+  );
+
+  if (target.launch !== null && target.launch <= maxLaunches) {
+    const mx = x(target.launch);
+    group.append(el('line', { x1: mx, x2: mx, y1: ty, y2: plotBottom, class: 'target-guide' }));
+    const marker = el('circle', { cx: mx, cy: ty, r: 5.5, class: 'target-marker' });
+    marker.append(el('title', {}, `Target first met at launch ${target.launch.toLocaleString('en-US')}`));
+    group.append(marker);
+    const text = `Launch ${target.launch.toLocaleString('en-US')}`;
+    const spot = launchLabelPosition(text, targetText, mx, ty, above, plotLeft, plotRight, plotBottom);
+    if (spot) group.append(el('text', { ...spot, class: 'target-label' }, text));
+  }
+  return group;
+}
+
+// Picks a spot for the "Launch N" label that avoids the target label, the line and the curve,
+// or returns null when there is none (narrow charts); the readouts still give the launch. Widths are estimated from character count (12px bold text is about 7px per character).
+function launchLabelPosition(text, targetText, mx, ty, targetAbove, plotLeft, plotRight, plotBottom) {
+  const w = text.length * 7;
+  const targetRight = plotLeft + 6 + targetText.length * 7 + 8;
+  const room = plotBottom - ty;
+  const fitsLeft = (y) => mx - 6 - w >= (targetAbove || Math.abs(y - (ty + 15)) >= 14 ? plotLeft + 4 : targetRight);
+
+  // Below the line, left of the guide: the curve is above the line there.
+  if (room >= 18) {
+    const y = room >= 30 ? plotBottom - 8 : ty + 15;
+    if (fitsLeft(y)) return { x: mx - 6, y, 'text-anchor': 'end' };
+    // Right of the guide only on the bottom row, well below where the curve runs.
+    if (room >= 30 && mx + 6 + w <= plotRight - 4) return { x: mx + 6, y, 'text-anchor': 'start' };
+  }
+  // Above the line, right of the marker: the curve is below the line there.
+  if (mx + 8 + w <= plotRight - 4 && (!targetAbove || mx + 8 >= targetRight)) {
+    return { x: mx + 8, y: ty - 8, 'text-anchor': 'start' };
+  }
+  return null;
 }

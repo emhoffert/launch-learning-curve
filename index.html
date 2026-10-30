@@ -42,6 +42,16 @@
           <label for="log-scale">Log–log axes (Wright's Law becomes a straight line)</label>
         </div>
 
+        <div class="field inline">
+          <input id="show-target" type="checkbox" aria-controls="target-field target-panel" />
+          <label for="show-target">Show target cost and modeled learning subsidy</label>
+        </div>
+
+        <div class="field" id="target-field" hidden>
+          <label for="target-cost">Target cost ($/kg)</label>
+          <input id="target-cost" type="number" min="0" step="any" />
+        </div>
+
         <button id="reset" type="button">Reset to defaults</button>
         <p id="message" class="message" role="status" aria-live="polite"></p>
       </section>
@@ -50,7 +60,8 @@
         <svg id="chart" role="img" aria-label="Modeled cost per launch, and the equivalent cost per kilogram, versus cumulative launches"></svg>
         <p class="note">
           Dots mark each doubling of cumulative launches (1, 2, 4, 8, …). The right axis shows the same cost per
-          kilogram, assuming an illustrative Starship payload of 100 t (100,000 kg) per launch.
+          kilogram, assuming an illustrative Starship payload of 100 t (100,000 kg) per launch.<span id="target-note" hidden> The dashed line is
+          the target cost; the shaded area is the gap above it until the target is first met.</span>
         </p>
 
         <div class="headline">
@@ -65,6 +76,22 @@
           <div><dt id="final-label">Cost of final launch</dt><dd id="final-cost"></dd></div>
           <div><dt>Reduction from launch 1</dt><dd id="reduction"></dd></div>
         </dl>
+
+        <section class="target-panel" id="target-panel" aria-labelledby="target-heading" hidden>
+          <h2 id="target-heading">Target cost and modeled learning subsidy</h2>
+          <dl class="readouts">
+            <div><dt>Target cost</dt><dd id="target-readout"></dd></div>
+            <div><dt>Target first achieved</dt><dd id="target-launch"></dd></div>
+            <div><dt>Launches required from launch 1</dt><dd id="target-count"></dd></div>
+            <div class="target-subsidy"><dt>Modeled learning subsidy</dt><dd id="subsidy"></dd></div>
+          </dl>
+          <p class="note">
+            <strong>Modeled learning subsidy</strong> assumes someone funds the difference between the modeled launch
+            cost and the target launch cost for each launch, from launch 1 until the target is reached: the sum of
+            max(modeled cost − target cost, 0) over those launches. It is not an estimate of an economically optimal
+            subsidy.
+          </p>
+        </section>
       </section>
     </main>
 
