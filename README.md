@@ -32,12 +32,42 @@ cost per kg ($) = launch cost ($M) × 1,000,000 ÷ 100,000 kg
 - Because the conversion is a constant multiple, it doesn't change the curve's shape: the right axis lines up exactly with the left axis in both linear and log–log modes, and each doubling still cuts cost per kg by the learning rate.
 - Hovering a doubling dot shows both values, e.g. `Launch 4: $61.31M · $613.09/kg`.
 
+## Target cost and modeled learning subsidy
+
+This overlay is optional and off by default, to keep the chart uncluttered. Tick **Show target cost and modeled learning subsidy**, then enter a **target cost in $/kg** (default **$100/kg**). The chart draws it as a dashed horizontal line, using the same fixed 100,000 kg payload assumption:
+
+```
+target launch cost ($M) = target $/kg × 100,000 kg ÷ 1,000,000
+                        = target $/kg ÷ 10
+```
+
+- **Target first achieved:** the first whole-number cumulative launch whose modeled cost is less than or equal to the target launch cost. A marker and a vertical guide show it on the chart. At the defaults ($100/kg = $10M per launch) that is **launch 682**.
+- **Launches required from launch 1:** the number of launches from launch 1 through that launch, inclusive.
+- **Modeled learning subsidy:** the discrete sum over every launch before the target launch:
+
+  ```
+  subsidy ($M) = Σ max(cost(n) − target launch cost, 0)   for n = 1 … target launch − 1
+  ```
+
+  At the defaults this is about **$3,620.75M**. It assumes someone funds the difference between the modeled launch cost and the target launch cost for each launch until the target is reached. **It is not an estimate of an economically optimal subsidy.** The shaded area between the curve and the target line shows this gap through the target launch.
+
+The cost axis stretches to keep the target line on the chart, but the launch axis always keeps your selected range. Special cases:
+
+| Situation | Result |
+|---|---|
+| Target launch is past the displayed range | Still calculated and reported as *Target reached beyond displayed range*; shading runs to the right edge |
+| Target at or above the starting cost | Target launch 1, subsidy $0 |
+| Learning rate 0% and target below the starting cost | *Unreachable*; no subsidy is reported |
+| Target needs more than 1,000,000 launches | *Not reached*; the search and the subsidy sum stop at 1,000,000 launches (small learning rates can need astronomically many launches) |
+
 ## Controls
 
 | Control | Range | Default |
 |---|---|---|
 | Learning rate | 0–50% | 21.7% |
 | Starting launch cost, C₁ | > 0 ($M) | 100 |
+| Show target cost and modeled learning subsidy | on / off | off |
+| Target cost (shown when the overlay is on) | > 0 ($/kg) | 100 |
 | Cumulative launches shown | 10–2,048 | 1,024 |
 | Log–log axes | on / off | off |
 
@@ -66,7 +96,7 @@ npm test
 ```
 index.html          Page markup
 styles.css          Layout and light/dark theme
-src/model.js        Wright's Law math and $/kg conversion (pure, no DOM)
+src/model.js        Wright's Law math, $/kg conversion, target launch and subsidy (pure, no DOM)
 src/scale.js        Axis scales and tick helpers (pure, no DOM)
 src/format.js       Cost, $/kg and percentage formatting (pure, no DOM)
 src/chart.js        Draws the chart as inline SVG
