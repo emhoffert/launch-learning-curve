@@ -27,3 +27,12 @@ export function formatCostPerKg(dollars) {
   const formatter = Math.abs(dollars) >= 1 ? twoDecimals : threeSignificant;
   return `$${formatter.format(dollars)}/kg`;
 }
+
+// Monte Carlo probability as a whole percentage, e.g. 0.589 -> "59%". With 10,000 runs the
+// sampling error is up to about ±0.5 points, so the extremes show as "<1%" and ">99%"
+// rather than claiming impossibility or certainty.
+export function formatProbability(p) {
+  if (p < 0.005) return '<1%';
+  if (p > 0.995) return '>99%';
+  return `${Math.round(p * 100)}%`;
+}

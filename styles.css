@@ -216,6 +216,64 @@ button:hover {
   stroke-width: 2;
 }
 
+#chart .mc-bands path {
+  fill: var(--accent);
+  stroke: none;
+}
+
+#chart .band-outer {
+  fill-opacity: 0.12;
+}
+
+#chart .band-inner {
+  fill-opacity: 0.24;
+}
+
+.hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.mc-legend {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 0.85rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+
+.swatch {
+  display: inline-block;
+  width: 18px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+.swatch.median {
+  height: 3px;
+}
+
+.swatch.inner {
+  opacity: 0.24;
+}
+
+.swatch.outer {
+  opacity: 0.12;
+}
+
+.readouts .mc-probability {
+  grid-column: span 2;
+}
+
+.readouts .mc-probability dt {
+  font-weight: 600;
+  color: var(--text);
+}
+
 #chart .target-gap path {
   fill: var(--target);
   fill-opacity: 0.14;
