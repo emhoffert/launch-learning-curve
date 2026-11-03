@@ -52,6 +52,17 @@
           <input id="target-cost" type="number" min="0" step="any" />
         </div>
 
+        <div class="field inline">
+          <input id="show-mc" type="checkbox" aria-controls="mc-field mc-panel" />
+          <label for="show-mc">Show uncertainty (Monte Carlo)</label>
+        </div>
+
+        <div class="field" id="mc-field" hidden>
+          <label for="lr-sd">Learning-rate uncertainty (± percentage points, 1σ)</label>
+          <input id="lr-sd" type="number" min="0" max="20" step="0.1" aria-describedby="lr-sd-hint" />
+          <p class="hint" id="lr-sd-hint"></p>
+        </div>
+
         <button id="reset" type="button">Reset to defaults</button>
         <p id="message" class="message" role="status" aria-live="polite"></p>
       </section>
@@ -76,6 +87,28 @@
           <div><dt id="final-label">Cost of final launch</dt><dd id="final-cost"></dd></div>
           <div><dt>Reduction from launch 1</dt><dd id="reduction"></dd></div>
         </dl>
+
+        <section class="target-panel" id="mc-panel" aria-labelledby="mc-heading" hidden>
+          <h2 id="mc-heading">Uncertainty (Monte Carlo)</h2>
+          <p class="mc-legend">
+            <span class="swatch median"></span> Median
+            <span class="swatch inner"></span> 25th–75th percentile
+            <span class="swatch outer"></span> 5th–95th percentile
+          </p>
+          <dl class="readouts">
+            <div class="mc-probability"><dt id="mc-prob-label">Probability of reaching the target</dt><dd id="mc-prob"></dd></div>
+          </dl>
+          <p class="note">
+            <strong>Probabilities are conditional on the assumed probability model</strong>, not forecasts of real
+            launch costs. <span id="mc-runs">10,000</span> simulations each draw one learning rate from a normal
+            distribution centered on the expected learning rate (1σ = the uncertainty in percentage points) and
+            truncated to the valid 0%–100% range (0% ≤ LR &lt; 100%), and use it for the whole curve. Draws outside
+            that range are redrawn, never clamped. Negative learning, where costs would rise with experience, is
+            excluded in this version. A fixed random seed makes
+            the results reproducible. Because the distribution is symmetric, the median closely tracks the
+            single-learning-rate curve. All other readouts use the single learning rate above.
+          </p>
+        </section>
 
         <section class="target-panel" id="target-panel" aria-labelledby="target-heading" hidden>
           <h2 id="target-heading">Target cost and modeled learning subsidy</h2>

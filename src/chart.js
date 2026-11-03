@@ -26,9 +26,13 @@ function isPowerOfTwo(n) {
 // series: [{ n, cost }, ...] with n running 1..N.
 // target (optional): { cost, perKg, launch } where cost is in $M and launch is the first
 // launch at or below it, or null when there is none to show (unreachable or past the limit).
-export function renderChart(svg, series, { logScale: useLog = false, target = null } = {}) {
+// bands (optional): Monte Carlo percentile curves { p5, p25, p75, p95 }, each shaped like
+// series. When given, series is the median curve and the target gap is not shaded.
+export function renderChart(svg, series, { logScale: useLog = false, target = null, bands = null } = {}) {
   const maxLaunches = series[series.length - 1].n;
   const costs = series.map((p) => p.cost);
+  // p5 is the low-cost edge; every band starts at C1, so it only extends the axis downward.
+  if (bands) costs.push(bands.p5[bands.p5.length - 1].cost);
   // Stretch the cost axis to include the target so its line is always on the chart.
   // The launch axis keeps the user's selected range.
   if (target) costs.push(target.cost);
@@ -137,15 +141,27 @@ export function renderChart(svg, series, { logScale: useLog = false, target = nu
   for (const p of series) {
     if (!isPowerOfTwo(p.n)) continue;
     const dot = el('circle', { cx: x(p.n), cy: y(p.cost), r: 4 });
-    dot.append(el('title', {}, `Launch ${p.n.toLocaleString('en-US')}: ${formatCost(p.cost)} · ${formatCostPerKg(costPerKg(p.cost))}`));
+    dot.append(el('title', {}, `${bands ? 'Median, launch' : 'Launch'} ${p.n.toLocaleString('en-US')}: ${formatCost(p.cost)} · ${formatCostPerKg(costPerKg(p.cost))}`));
     doublings.append(dot);
   }
 
   svg.append(grid);
-  if (target) svg.append(targetShading(series, target, x, y));
+  if (bands) svg.append(uncertaintyBands(bands, x, y));
+  else if (target) svg.append(targetShading(series, target, x, y));
   svg.append(axes, curve);
   if (target) svg.append(targetOverlay(target, x, y, { plotLeft, plotRight, plotBottom }, maxLaunches));
   svg.append(doublings);
+}
+
+// Shades the 5th–95th and 25th–75th percentile bands, outer band first so the inner one sits on top.
+function uncertaintyBands(bands, x, y) {
+  const group = el('g', { class: 'mc-bands' });
+  for (const [low, high, cls] of [['p5', 'p95', 'band-outer'], ['p25', 'p75', 'band-inner']]) {
+    const top = bands[high].map((p, i) => `${i === 0 ? 'M' : 'L'}${x(p.n).toFixed(2)},${y(p.cost).toFixed(2)}`);
+    const bottom = bands[low].slice().reverse().map((p) => `L${x(p.n).toFixed(2)},${y(p.cost).toFixed(2)}`);
+    group.append(el('path', { d: `${top.join('')}${bottom.join('')}Z`, class: cls }));
+  }
+  return group;
 }
 
 // Shades the gap between the curve and the target line, from launch 1 through the target

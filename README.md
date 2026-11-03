@@ -60,6 +60,20 @@ The cost axis stretches to keep the target line on the chart, but the launch axi
 | Learning rate 0% and target below the starting cost | *Unreachable*; no subsidy is reported |
 | Target needs more than 1,000,000 launches | *Not reached*; the search and the subsidy sum stop at 1,000,000 launches (small learning rates can need astronomically many launches) |
 
+## Uncertainty (Monte Carlo)
+
+Also optional and off by default. With it off, the page is exactly the deterministic model above. Tick **Show uncertainty (Monte Carlo)** and set the **learning-rate uncertainty in percentage points** (1 standard deviation, default **±5.0**). The learning-rate control becomes the expected learning rate, so at the defaults the approximate 1σ range is **16.7%–26.7%**, not 21.7% ± 5% of 21.7%.
+
+- **10,000 simulations**, with a fixed random seed so the results are reproducible.
+- Each simulation draws **one learning rate** and uses it for the whole curve.
+- The learning rate is **normally distributed** around the mean, **truncated to 0% ≤ LR < 100%**: out-of-range draws are redrawn, never clamped. **This version excludes negative learning rates** (costs rising with experience). Near 0% the truncation pulls the effective mean slightly upward.
+- The chart shows the **median** curve, a **25th–75th percentile** band and a **5th–95th percentile** band. The target gap shading is hidden in this mode to keep the bands readable.
+- With the target overlay on, the panel shows the **probability of reaching the target within the displayed cumulative launches**: the share of simulations whose cost at the last displayed launch is at or below the target. It is shown to the nearest whole percent, and as "<1%" or ">99%" at the extremes (10,000 runs carry up to about ±0.5 points of sampling error).
+
+**Probabilities are conditional on the assumed probability model.** They describe what follows from the assumed distribution, not a forecast of real launch costs. All other readouts (cost of the last launch, target launch, subsidy) still use the single learning rate.
+
+How it is computed: cost falls as the learning rate rises at every launch, so the p-th percentile cost at every launch is the cost at the (1 − p) learning-rate rank. The page sorts the 10,000 draws once and draws each band from one learning rate (nearest-rank percentiles). A unit test checks that this matches a brute-force per-launch percentile over every simulation. Because the distribution is symmetric, the median curve closely tracks the single-learning-rate curve.
+
 ## Controls
 
 | Control | Range | Default |
@@ -68,6 +82,8 @@ The cost axis stretches to keep the target line on the chart, but the launch axi
 | Starting launch cost, C₁ | > 0 ($M) | 100 |
 | Show target cost and modeled learning subsidy | on / off | off |
 | Target cost (shown when the overlay is on) | > 0 ($/kg) | 100 |
+| Show uncertainty (Monte Carlo) | on / off | off |
+| Learning-rate uncertainty, 1σ (shown when uncertainty is on) | 0–20 percentage points | 5.0 |
 | Cumulative launches shown | 10–2,048 | 1,024 |
 | Log–log axes | on / off | off |
 
@@ -98,10 +114,11 @@ index.html          Page markup
 styles.css          Layout and light/dark theme
 src/model.js        Wright's Law math, $/kg conversion, target launch and subsidy (pure, no DOM)
 src/scale.js        Axis scales and tick helpers (pure, no DOM)
-src/format.js       Cost, $/kg and percentage formatting (pure, no DOM)
+src/montecarlo.js   Seeded learning-rate draws, percentile curves and target probability (pure, no DOM)
+src/format.js       Cost, $/kg, percentage and probability formatting (pure, no DOM)
 src/chart.js        Draws the chart as inline SVG
 src/main.js         Connects the controls to the model and chart
-tests/              Unit tests for model.js, scale.js and format.js
+tests/              Unit tests for model.js, montecarlo.js, scale.js and format.js
 ```
 
 There are no runtime dependencies and no build step.

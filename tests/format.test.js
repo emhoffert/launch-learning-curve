@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { formatCost, formatCostPerKg, formatPercent } from '../src/format.js';
+import { formatCost, formatCostPerKg, formatPercent, formatProbability } from '../src/format.js';
 import { costPerKg, unitCost } from '../src/model.js';
 
 test('formatCost shows up to two decimals for costs of $1M or more', () => {
@@ -52,4 +52,15 @@ test('formatCostPerKg keeps three significant digits below $1/kg', () => {
 
 test('formatCostPerKg of the default final launch matches the README', () => {
   assert.equal(formatCostPerKg(costPerKg(unitCost(1024, 100, 0.217))), '$86.62/kg');
+});
+
+test('formatProbability rounds to whole percent and avoids claiming 0% or 100%', () => {
+  assert.equal(formatProbability(0.589), '59%');
+  assert.equal(formatProbability(0.5), '50%');
+  assert.equal(formatProbability(0.01), '1%');
+  assert.equal(formatProbability(0.004), '<1%');
+  assert.equal(formatProbability(0), '<1%');
+  assert.equal(formatProbability(0.99), '99%');
+  assert.equal(formatProbability(0.996), '>99%');
+  assert.equal(formatProbability(1), '>99%');
 });
