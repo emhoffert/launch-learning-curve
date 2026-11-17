@@ -11,6 +11,14 @@ import {
   targetLaunchCost,
 } from './model.js';
 import { MC_DEFAULTS, simulateUncertainty } from './montecarlo.js';
+import {
+  CADENCE_DEFAULTS,
+  CADENCE_LIMITS,
+  CADENCE_PRESETS,
+  SCENARIO_LABELS,
+  milestoneRows,
+  yearTicks,
+} from './cadence.js';
 import { renderChart } from './chart.js';
 import { formatCost, formatCostPerKg, formatPercent, formatProbability } from './format.js';
 
@@ -34,6 +42,12 @@ const controls = {
   mcField: $('mc-field'),
   sd: $('lr-sd'),
   sdHint: $('lr-sd-hint'),
+  showCalendar: $('show-calendar'),
+  calendarField: $('calendar-field'),
+  startYear: $('start-year'),
+  scenario: $('cadence-scenario'),
+  firstYear: $('first-year-launches'),
+  growth: $('annual-growth'),
   reset: $('reset'),
 };
 const chart = $('chart');
@@ -61,6 +75,21 @@ const LR_LABEL_MC = 'Expected learning rate (%)';
 const targetPanel = $('target-panel');
 const targetNote = $('target-note');
 const CHART_LABEL = chart.getAttribute('aria-label');
+const calendarPanel = $('calendar-panel');
+const calendarRows = $('calendar-rows');
+const calendarMcNote = $('calendar-mc-note');
+const calendarStartYear = $('calendar-start-year');
+const cadenceDelay = $('cadence-delay');
+const cadenceDelayYear = $('cadence-delay-year');
+const cadenceGrowthYear = $('cadence-growth-year');
+const GROWTH_MAX_PERCENT = CADENCE_LIMITS.growthMax * 100;
+
+// Keep the input limits in step with the cadence model.
+controls.startYear.min = String(CADENCE_LIMITS.startYearMin);
+controls.startYear.max = String(CADENCE_LIMITS.startYearMax);
+controls.firstYear.min = String(CADENCE_LIMITS.firstYearMin);
+controls.firstYear.max = String(CADENCE_LIMITS.firstYearMax);
+controls.growth.max = String(GROWTH_MAX_PERCENT);
 
 // Returns validated inputs, or { error } describing the first problem found.
 function readInputs() {
@@ -86,7 +115,31 @@ function readInputs() {
   if (controls.showMc.checked && (!Number.isFinite(sdPoints) || sdPoints < 0 || sdPoints > SD_MAX_POINTS)) {
     return { error: `Learning-rate uncertainty must be between 0 and ${SD_MAX_POINTS} percentage points.` };
   }
-  return { learningRate: lrPercent / 100, startingCost, targetPerKg, maxLaunches, sd: sdPoints / 100 };
+  const inputs = { learningRate: lrPercent / 100, startingCost, targetPerKg, maxLaunches, sd: sdPoints / 100 };
+  // The calendar inputs are only validated while the timeline is switched on.
+  if (!controls.showCalendar.checked) return inputs;
+  const calendar = readCalendarInputs();
+  return calendar.error ? calendar : { ...inputs, ...calendar };
+}
+
+function readCalendarInputs() {
+  const startYear = controls.startYear.valueAsNumber;
+  const firstYear = controls.firstYear.valueAsNumber;
+  const growthPercent = controls.growth.valueAsNumber;
+  const { startYearMin, startYearMax, firstYearMin, firstYearMax } = CADENCE_LIMITS;
+
+  if (!Number.isInteger(startYear) || startYear < startYearMin || startYear > startYearMax) {
+    return { error: `Start year must be a whole number from ${startYearMin} to ${startYearMax}.` };
+  }
+  if (!Number.isInteger(firstYear) || firstYear < firstYearMin || firstYear > firstYearMax) {
+    const max = firstYearMax.toLocaleString('en-US');
+    return { error: `First-year launches must be a whole number from ${firstYearMin} to ${max}.` };
+  }
+  if (!Number.isFinite(growthPercent) || growthPercent < 0 || growthPercent > GROWTH_MAX_PERCENT) {
+    return { error: `Annual growth must be between 0% and ${GROWTH_MAX_PERCENT}%.` };
+  }
+  const scenario = controls.scenario.value in SCENARIO_LABELS ? controls.scenario.value : 'custom';
+  return { startYear, scenario, cadence: { firstYear, growth: growthPercent / 100 } };
 }
 
 function update() {
@@ -95,6 +148,8 @@ function update() {
   controls.targetField.hidden = !targetOn;
   const mcOn = controls.showMc.checked;
   controls.mcField.hidden = !mcOn;
+  const calendarOn = controls.showCalendar.checked;
+  controls.calendarField.hidden = !calendarOn;
   lrLabel.textContent = mcOn ? LR_LABEL_MC : LR_LABEL;
   controls.lrNumber.setAttribute('aria-label', mcOn ? LR_LABEL_MC : LR_LABEL);
 
@@ -108,7 +163,7 @@ function update() {
   message.textContent = '';
   chartPanel.classList.remove('stale');
 
-  const { learningRate, startingCost, targetPerKg, maxLaunches, sd } = inputs;
+  const { learningRate, startingCost, targetPerKg, maxLaunches, sd, startYear, scenario, cadence } = inputs;
   const series = generateCurve(startingCost, learningRate, maxLaunches);
   let target = null;
   let result;
@@ -125,8 +180,17 @@ function update() {
       startingCost, mean: learningRate, sd, maxLaunches, targetCost: targetOn ? targetCost : null,
     });
   }
+  let calendar = null;
+  if (calendarOn) {
+    calendar = {
+      label: `Modeled calendar year (${SCENARIO_LABELS[scenario]})`,
+      ticks: yearTicks(maxLaunches, cadence, startYear),
+    };
+  }
   // In uncertainty mode the median replaces the single-learning-rate curve as the line.
-  renderChart(chart, mc ? mc.bands.p50 : series, { logScale: controls.logToggle.checked, target, bands: mc?.bands });
+  renderChart(chart, mc ? mc.bands.p50 : series, {
+    logScale: controls.logToggle.checked, target, bands: mc?.bands, calendar,
+  });
 
   const finalCost = series[series.length - 1].cost;
   readouts.progressRatio.textContent = formatPercent(1 - learningRate);
@@ -148,6 +212,15 @@ function update() {
   if (mcOn) {
     const label = chart.getAttribute('aria-label');
     chart.setAttribute('aria-label', `${label} Monte Carlo median with 25th–75th and 5th–95th percentile bands.`);
+  }
+  calendarPanel.hidden = !calendarOn;
+  if (calendarOn) {
+    showCalendar({ startingCost, learningRate, cadence, startYear, maxLaunches, targetPerKg: targetOn ? targetPerKg : null });
+    calendarMcNote.hidden = !mcOn;
+    const label = chart.getAttribute('aria-label');
+    const sep = label.endsWith('.') ? ' ' : '. ';
+    const scenarioLabel = SCENARIO_LABELS[scenario];
+    chart.setAttribute('aria-label', `${label}${sep}Calendar-year axis along the top (${scenarioLabel}, from ${startYear}).`);
   }
 }
 
@@ -210,6 +283,44 @@ function showUncertainty(mc, { learningRate, sd, startingCost, targetCost, maxLa
   }
 }
 
+// Fills the milestone table and the start-year wording in the cadence notes.
+function showCalendar({ startingCost, learningRate, cadence, startYear, maxLaunches, targetPerKg }) {
+  calendarStartYear.textContent = String(startYear);
+  cadenceDelay.hidden = startYear === CADENCE_DEFAULTS.startYear;
+  cadenceDelayYear.textContent = String(startYear);
+  cadenceGrowthYear.textContent = String(startYear + 1);
+
+  const rows = milestoneRows({ c1: startingCost, lr: learningRate, cadence, startYear, maxLaunches, targetPerKg });
+  calendarRows.replaceChildren(...rows.map((row) => {
+    const tr = document.createElement('tr');
+    if (row.isTarget) tr.className = 'calendar-target';
+    const perKg = document.createElement('th');
+    perKg.scope = 'row';
+    perKg.textContent = row.isTarget ? `Target (${formatCostPerKg(row.perKg)})` : formatCostPerKg(row.perKg);
+    const launch = document.createElement('td');
+    const date = document.createElement('td');
+    if (row.status === 'reached') {
+      launch.textContent = row.launch.toLocaleString('en-US');
+      setReadout(date, row.date, row.beyondRange ? 'beyond displayed range' : '');
+    } else {
+      launch.textContent = '—';
+      const limit = MAX_TARGET_LAUNCH.toLocaleString('en-US');
+      const why = row.status === 'unreachable' ? 'At a 0% learning rate, cost never falls' : `Not within ${limit} launches`;
+      setReadout(date, 'not reached', why);
+    }
+    tr.append(perKg, launch, date);
+    return tr;
+  }));
+}
+
+// Fills both cadence numbers from a preset.
+function applyPreset(name) {
+  const preset = CADENCE_PRESETS[name];
+  if (!preset) return;
+  controls.firstYear.value = String(preset.firstYear);
+  controls.growth.value = String(Math.round(preset.growth * 1000) / 10);
+}
+
 function setDefaults() {
   const lrPercent = (DEFAULTS.learningRate * 100).toFixed(1);
   controls.lrRange.value = lrPercent;
@@ -221,6 +332,10 @@ function setDefaults() {
   controls.showTarget.checked = false;
   controls.sd.value = (MC_DEFAULTS.sd * 100).toFixed(1);
   controls.showMc.checked = false;
+  controls.showCalendar.checked = CADENCE_DEFAULTS.enabled;
+  controls.startYear.value = String(CADENCE_DEFAULTS.startYear);
+  controls.scenario.value = CADENCE_DEFAULTS.scenario;
+  applyPreset(CADENCE_DEFAULTS.scenario);
 }
 
 // Keep the learning-rate slider and number box in sync.
@@ -242,6 +357,19 @@ controls.logToggle.addEventListener('change', update);
 controls.showTarget.addEventListener('change', update);
 controls.showMc.addEventListener('change', update);
 controls.sd.addEventListener('input', update);
+controls.showCalendar.addEventListener('change', update);
+controls.startYear.addEventListener('input', update);
+controls.scenario.addEventListener('change', () => {
+  applyPreset(controls.scenario.value);
+  update();
+});
+// Editing either cadence number makes it a Custom scenario, starting from the values shown.
+for (const input of [controls.firstYear, controls.growth]) {
+  input.addEventListener('input', () => {
+    controls.scenario.value = 'custom';
+    update();
+  });
+}
 controls.reset.addEventListener('click', () => {
   setDefaults();
   update();

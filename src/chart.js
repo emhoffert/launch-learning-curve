@@ -8,6 +8,8 @@ import { costPerKg } from './model.js';
 const MIN_WIDTH = 280;
 const NARROW_WIDTH = 520;
 const MARGIN = { top: 20, right: 72, bottom: 56, left: 72 };
+// Top margin when the calendar-year axis is shown: room for its labels and title.
+const CALENDAR_TOP = 52;
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
 const formatTick = new Intl.NumberFormat('en-US', { maximumSignificantDigits: 4 }).format;
@@ -28,7 +30,14 @@ function isPowerOfTwo(n) {
 // launch at or below it, or null when there is none to show (unreachable or past the limit).
 // bands (optional): Monte Carlo percentile curves { p5, p25, p75, p95 }, each shaped like
 // series. When given, series is the median curve and the target gap is not shaded.
-export function renderChart(svg, series, { logScale: useLog = false, target = null, bands = null } = {}) {
+// calendar (optional): { label, ticks: [{ year, launch }, ...] } draws a calendar-year axis
+// along the top, with each year's tick at its (fractional) launch position. The caller
+// builds the label and ticks; the chart only draws them.
+export function renderChart(
+  svg,
+  series,
+  { logScale: useLog = false, target = null, bands = null, calendar = null } = {},
+) {
   const maxLaunches = series[series.length - 1].n;
   const costs = series.map((p) => p.cost);
   // p5 is the low-cost edge; every band starts at C1, so it only extends the axis downward.
@@ -45,7 +54,7 @@ export function renderChart(svg, series, { logScale: useLog = false, target = nu
 
   const plotLeft = MARGIN.left;
   const plotRight = width - MARGIN.right;
-  const plotTop = MARGIN.top;
+  const plotTop = calendar ? CALENDAR_TOP : MARGIN.top;
   const plotBottom = height - MARGIN.bottom;
 
   // The right axis shows the same costs in $/kg. It is a constant multiple of the left
@@ -148,9 +157,64 @@ export function renderChart(svg, series, { logScale: useLog = false, target = nu
   svg.append(grid);
   if (bands) svg.append(uncertaintyBands(bands, x, y));
   else if (target) svg.append(targetShading(series, target, x, y));
-  svg.append(axes, curve);
+  svg.append(axes);
+  if (calendar) {
+    const domainMin = useLog ? 1 : 0;
+    const ticks = calendar.ticks.filter((t) => t.launch >= domainMin && t.launch <= maxLaunches);
+    svg.append(calendarAxis(calendar.label, ticks, x, { plotLeft, plotRight, plotTop }, narrow ? 30 : 36));
+  }
+  svg.append(curve);
   if (target) svg.append(targetOverlay(target, x, y, { plotLeft, plotRight, plotBottom }, maxLaunches));
   svg.append(doublings);
+}
+
+// Calendar-year axis along the top of the plot: an axis line, a tick mark for every year,
+// thinned year labels and a centered title. Ticks closer than 2 px are dropped first.
+function calendarAxis(label, ticks, x, { plotLeft, plotRight, plotTop }, minGapPx) {
+  const group = el('g', { class: 'axis calendar-axis' });
+  group.append(el('line', { x1: plotLeft, x2: plotRight, y1: plotTop, y2: plotTop, class: 'axis-line' }));
+  const placed = thinYearLabels(
+    thinYearTicks(ticks.map((t) => ({ year: t.year, px: x(t.launch) }))),
+    minGapPx,
+  );
+  for (const t of placed) {
+    group.append(el('line', { x1: t.px, x2: t.px, y1: plotTop - 6, y2: plotTop, class: 'axis-line' }));
+    if (t.label) {
+      group.append(el('text', { x: t.px, y: plotTop - 10, 'text-anchor': 'middle', class: 'tick-label' }, t.label));
+    }
+  }
+  group.append(
+    el('text', { x: (plotLeft + plotRight) / 2, y: plotTop - 32, 'text-anchor': 'middle', class: 'axis-title' }, label),
+  );
+  return group;
+}
+
+// Drops year ticks that would sit closer than minGapPx to the last tick kept, so a very slow
+// cadence (one tick per launch or less) doesn't merge into a solid bar. ticks: [{ year, px }]
+// in ascending px. The first tick is always kept; well-spaced ticks pass through unchanged.
+export function thinYearTicks(ticks, minGapPx = 2) {
+  let lastPx = null;
+  return ticks.filter(({ px }) => {
+    if (lastPx !== null && px - lastPx < minGapPx) return false;
+    lastPx = px;
+    return true;
+  });
+}
+
+// Thins year labels so none collide. ticks: [{ year, px }] in ascending px. Returns every tick
+// with a label: the full year for the first one shown, a short "'28" form after that, or ''
+// (tick mark only) when it would sit closer than minGapPx to the last label kept.
+// When the ticks span 100 years or more, every label is a full year, because a short "'26"
+// could then be read as a year in the wrong century.
+export function thinYearLabels(ticks, minGapPx) {
+  const fullYears = ticks.length > 1 && ticks[ticks.length - 1].year - ticks[0].year >= 100;
+  let lastPx = null;
+  return ticks.map(({ year, px }) => {
+    if (lastPx !== null && px - lastPx < minGapPx) return { year, px, label: '' };
+    const label = lastPx === null || fullYears ? String(year) : `'${String(year).slice(-2)}`;
+    lastPx = px;
+    return { year, px, label };
+  });
 }
 
 // Shades the 5th–95th and 25th–75th percentile bands, outer band first so the inner one sits on top.
