@@ -74,6 +74,68 @@ Also optional and off by default. With it off, the page is exactly the determini
 
 How it is computed: cost falls as the learning rate rises at every launch, so the p-th percentile cost at every launch is the cost at the (1 − p) learning-rate rank. The page sorts the 10,000 draws once and draws each band from one learning rate (nearest-rank percentiles). A unit test checks that this matches a brute-force per-launch percentile over every simulation. Because the distribution is symmetric, the median curve closely tracks the single-learning-rate curve.
 
+## Calendar timeline
+
+Also optional and off by default. With it off, the page is exactly as described above. Tick **Show calendar timeline** to turn cumulative launch counts into **modeled dates**, using a separate launch-cadence model. Cumulative launches still drive the learning curve; cadence only decides when those launches happen, so the cost math and every other readout are unchanged.
+
+**These are modeled dates, not forecasts.** Each date follows from the selected learning rate *and* the selected cadence scenario.
+
+### Cadence model
+
+The inputs are **first-year launches** `R` (launches in the start year) and **annual growth** `g` (each year's total is the previous year's × (1 + g)). The ramp is a smooth exponential, scaled so whole-year totals match the year-by-year series exactly. Time `t` is in years since **January 1 of the start year**.
+
+```
+cumulative launches by time t:
+  N(t) = R × ((1 + g)ᵗ − 1) ÷ g          for g > 0
+  N(t) = R × t                           for g = 0
+
+launch n happens when N(t) = n − 1:
+  t(n) = ln(1 + (n − 1) × g ÷ R) ÷ ln(1 + g)     for g > 0
+  t(n) = (n − 1) ÷ R                              for g = 0
+
+modeled date (fractional year) = start year + t(n)
+```
+
+For example, with R = 56 and g = 30%, 56 launches happen in the first year and 128.8 by the end of the second.
+
+### Scenarios
+
+| Scenario | First-year launches | Growth from year 2 | Basis |
+|---|---|---|---|
+| Conservative | 36 | 15% | Well under SpaceX's 2027 targets; modeled growth |
+| **Base** (default) | 56 | 30% | Between Conservative and the stated targets; modeled growth |
+| Aggressive | 78 | 50% | SpaceX's stated 2027 targets taken at face value (≈26 in H1 at weekly + ≈52 in H2 at twice weekly); modeled growth |
+| Custom | 1–1,000 (whole number) | 0–100% | Your own assumption |
+
+Picking a preset fills in both numbers. Editing either number switches the scenario to Custom, starting from the numbers shown.
+
+- **2027 assumption:** the first-year rates are anchored to SpaceX's stated 2027 Starship cadence targets from its Q3 2026 earnings call (Oct 20, 2026): roughly weekly in H1 2027, two or more a week by late 2027. Those are targets, not commitments. Sources: [NewSpace Economy](https://newspaceeconomy.ca/2026/10/21/spacex-targets-weekly-starship-launches-in-2027-and-early-orbital-refueling-tests/), [TokenPost](https://www.tokenpost.com/news/technology/36657).
+- **After the first year:** the growth rates are our own illustrative modeling assumptions, and growth is **uncapped**.
+- **Start year** (2027–2040) shifts the whole program: the first-year numbers apply to the chosen year, and the note says the rates are anchored to the 2027 targets, *delayed to* that year.
+- **Launch 1** is assumed to happen on January 1 of the start year. Test flights before then aren't counted.
+
+### Chart axis and milestone table
+
+When the timeline is on, a **Modeled calendar year** axis runs along the top of the chart, with a tick at each January 1 inside the displayed launch range. Labels are thinned where ticks crowd together, and later years are shortened ('28). The bottom, left and right axes are unchanged.
+
+The **Calendar timeline** panel lists modeled dates for **$500, $200, $100 and $50/kg**, plus your target when the target overlay is on (a target equal to one of those values is shown as one Target row). The launch is the target launch described above, and the date reads **early / mid / late YYYY** (thirds of the year). At the defaults with Base cadence:
+
+| $/kg | Launch | Modeled date |
+|---|---|---|
+| $500 | 8 | early 2027 |
+| $200 | 96 | mid 2028 |
+| $100 | 682 | late 2032 |
+| $50 | 4,859 | mid 2039 (beyond displayed range) |
+
+Dates use the **single (expected) learning rate** and the deterministic cadence, even when Monte Carlo is on; the uncertainty bands are not reflected in them. Special cases:
+
+| Situation | Result |
+|---|---|
+| Milestone met at launch 1 | Launch 1, early {start year} |
+| Milestone launch is past the displayed range | Date still shown, marked *beyond displayed range* |
+| Learning rate 0%, or the milestone needs more than 1,000,000 launches | *not reached* |
+| Modeled date in 2101 or later | *after 2100* (only very slow Custom cadences get here) |
+
 ## Controls
 
 | Control | Range | Default |
@@ -84,6 +146,11 @@ How it is computed: cost falls as the learning rate rises at every launch, so th
 | Target cost (shown when the overlay is on) | > 0 ($/kg) | 100 |
 | Show uncertainty (Monte Carlo) | on / off | off |
 | Learning-rate uncertainty, 1σ (shown when uncertainty is on) | 0–20 percentage points | 5.0 |
+| Show calendar timeline | on / off | off |
+| Start year (shown when the timeline is on) | 2027–2040 | 2027 |
+| Cadence scenario (shown when the timeline is on) | Conservative / Base / Aggressive / Custom | Base |
+| First-year launches (shown when the timeline is on) | 1–1,000 (whole number) | 56 |
+| Annual growth (shown when the timeline is on) | 0–100% | 30% |
 | Cumulative launches shown | 10–2,048 | 1,024 |
 | Log–log axes | on / off | off |
 
@@ -115,10 +182,11 @@ styles.css          Layout and light/dark theme
 src/model.js        Wright's Law math, $/kg conversion, target launch and subsidy (pure, no DOM)
 src/scale.js        Axis scales and tick helpers (pure, no DOM)
 src/montecarlo.js   Seeded learning-rate draws, percentile curves and target probability (pure, no DOM)
+src/cadence.js      Launch cadence, calendar-year ticks and milestone dates (pure, no DOM)
 src/format.js       Cost, $/kg, percentage and probability formatting (pure, no DOM)
 src/chart.js        Draws the chart as inline SVG
 src/main.js         Connects the controls to the model and chart
-tests/              Unit tests for model.js, montecarlo.js, scale.js and format.js
+tests/              Unit tests for model.js, montecarlo.js, cadence.js, scale.js, format.js and chart.js
 ```
 
 There are no runtime dependencies and no build step.

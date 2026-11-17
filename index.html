@@ -63,6 +63,44 @@
           <p class="hint" id="lr-sd-hint"></p>
         </div>
 
+        <div class="field inline">
+          <input id="show-calendar" type="checkbox" aria-controls="calendar-field calendar-panel" />
+          <label for="show-calendar">Show calendar timeline (modeled dates)</label>
+        </div>
+
+        <div class="field calendar-field" id="calendar-field" hidden>
+          <div class="field">
+            <label for="start-year">Start year</label>
+            <input id="start-year" type="number" min="2027" max="2040" step="1" />
+          </div>
+          <div class="field">
+            <label for="cadence-scenario">Cadence scenario</label>
+            <select id="cadence-scenario">
+              <option value="conservative">Conservative</option>
+              <option value="base">Base</option>
+              <option value="aggressive">Aggressive</option>
+              <option value="custom">Custom</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="first-year-launches">First-year launches</label>
+            <input id="first-year-launches" type="number" min="1" max="1000" step="1" />
+          </div>
+          <div class="field">
+            <label for="annual-growth">Annual growth (%)</label>
+            <input id="annual-growth" type="number" min="0" max="100" step="0.1" />
+          </div>
+          <p class="cadence-note" id="cadence-note-2027">
+            <strong>2027 assumption:</strong> the first-year rates are anchored to SpaceX's stated 2027 Starship
+            cadence targets (weekly in H1, two or more a week by late 2027; Oct 2026)<span id="cadence-delay" hidden>,
+            delayed to <span id="cadence-delay-year"></span></span>. Those are targets, not commitments.
+          </p>
+          <p class="cadence-note" id="cadence-note-growth">
+            <strong><span id="cadence-growth-year">2028</span> onward:</strong> the growth rates are our illustrative
+            modeling assumptions and are uncapped.
+          </p>
+        </div>
+
         <button id="reset" type="button">Reset to defaults</button>
         <p id="message" class="message" role="status" aria-live="polite"></p>
       </section>
@@ -123,6 +161,23 @@
             cost and the target launch cost for each launch, from launch 1 until the target is reached: the sum of
             max(modeled cost − target cost, 0) over those launches. It is not an estimate of an economically optimal
             subsidy.
+          </p>
+        </section>
+
+        <section class="target-panel" id="calendar-panel" aria-labelledby="calendar-heading" hidden>
+          <h2 id="calendar-heading">Calendar timeline</h2>
+          <table class="calendar-table">
+            <thead>
+              <tr><th scope="col">$/kg</th><th scope="col">Launch</th><th scope="col">Modeled date</th></tr>
+            </thead>
+            <tbody id="calendar-rows"></tbody>
+          </table>
+          <p class="note">
+            <strong>These are modeled dates</strong>, the result of the selected learning rate and cadence scenario.
+            They are not forecasts. Launch 1 is assumed to happen at the start of
+            <span id="calendar-start-year">2027</span>; test flights before then aren't counted.<span id="calendar-mc-note" hidden>
+            With uncertainty on, the dates use the expected learning rate; the Monte Carlo bands are not reflected in
+            them.</span>
           </p>
         </section>
       </section>

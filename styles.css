@@ -143,6 +143,32 @@ input[type='number'] {
   color: var(--text);
 }
 
+select {
+  font: inherit;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.calendar-field {
+  gap: 14px;
+}
+
+.cadence-note {
+  margin: 0;
+  padding-left: 10px;
+  border-left: 3px solid var(--border);
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.cadence-note strong {
+  display: block;
+  color: var(--text);
+}
+
 input[type='range'],
 input[type='checkbox'] {
   accent-color: var(--accent);
@@ -387,6 +413,54 @@ button:hover {
   font-size: 0.8rem;
   font-weight: 400;
   color: var(--muted);
+}
+
+.calendar-table {
+  width: 100%;
+  margin: 0 0 8px;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.calendar-table th,
+.calendar-table td {
+  padding: 8px 8px 8px 0;
+  border-top: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.calendar-table thead th {
+  border-top: none;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 400;
+}
+
+.calendar-table tbody th,
+.calendar-table td {
+  font-weight: 600;
+}
+
+.calendar-table td:nth-child(2),
+.calendar-table thead th:nth-child(2) {
+  text-align: right;
+  padding-right: 24px;
+}
+
+.calendar-table .calendar-target th {
+  color: var(--target);
+}
+
+.calendar-table .status {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+#chart .calendar-axis .tick-label {
+  font-variant-numeric: tabular-nums;
 }
 
 @media (max-width: 800px) {
