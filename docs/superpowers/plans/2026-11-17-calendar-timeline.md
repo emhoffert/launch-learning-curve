@@ -75,7 +75,7 @@ Overlaps found and removed:
 ## Review Focus
 
 1. **Default target equals a ladder value ($100/kg).** With the target overlay on at the defaults, the table must show one $100 row marked as the target, not two. *(Agent A, Task A2 test.)*
-2. **Very slow Custom cadence (1 launch/year, 0% growth).** $50/kg falls at launch 4,859, about year 6,885, and must print "after 2100". The tick list holds only the start year, and nothing throws. *(Agent A, Task A2; Agent B, Task B1.)*
+2. **Very slow Custom cadence (1 launch/year, 0% growth).** $50/kg falls at launch 4,859, about year 6,885, and must print "after 2100". The tick list has one tick per year up to the launches shown (up to 2,048), and nothing throws. *(Agent A, Task A2; Agent B, Task B1.)*
 3. **Third boundaries under floating point.** `2027 + 1/3` must read "mid 2027", and `2100.999` must read "late 2100". *(Agent A, Task A1.)*
 4. **Invalid Custom input while the calendar is on** (blank, 0, 1.5 launches, 101%). The page shows a message and keeps the dimmed chart, with no exception in the console. With the calendar off, the same bad values are ignored. *(Agent C, Task C1 checklist.)*
 5. **Crowded ticks** at narrow width (< 520 px) in log–log mode with Aggressive cadence. No two labels overlap, and every year keeps its tick mark. *(Agent B, Task B1 test.)*
@@ -102,7 +102,7 @@ Overlaps found and removed:
     | 682 | 2036.6222 | 2032.8563 | 2031.1433 |
     | 1024 | 2038.8817 | 2034.1228 | 2031.9883 |
 
-  - `yearTicks(1024, base, 2027)` returns years 2027–2034 with launches `[1, 57, 129.8, 224.44, 347.472, 507.414, 715.338, 985.639]` (to 1e-3). `yearTicks(1024, aggressive, 2027)` returns 5 ticks, the last being `{year: 2031, launch: 634.75}`. `yearTicks(10, {firstYear:1, growth:0}, 2030)` returns `[{year: 2030, launch: 1}]`.
+  - `yearTicks(1024, base, 2027)` returns years 2027–2034 with launches `[1, 57, 129.8, 224.44, 347.472, 507.414, 715.338, 985.639]` (to 1e-3). `yearTicks(1024, aggressive, 2027)` returns 5 ticks, the last being `{year: 2031, launch: 634.75}`. `yearTicks(1, {firstYear:1, growth:0}, 2030)` returns `[{year: 2030, launch: 1}]`, and `yearTicks(10, {firstYear:1, growth:0}, 2030)` returns 10 ticks (years 2030–2039 at launches 1–10).
   - Labels: `modeledDateLabel(2027)` is `'early 2027'`, `(2027 + 1/3)` is `'mid 2027'`, `(2027 + 2/3)` is `'late 2027'`, `(2032.8563)` is `'late 2032'`, `(2100.999)` is `'late 2100'`, and `(2101)` is `'after 2100'`.
   - RangeError for `launchTime(0, base)`, for `firstYear: 0`, and for `growth: -0.1`.
 - [ ] **Step 2:** Run `node --test tests/cadence.test.js`. Expected: FAIL (module not found).

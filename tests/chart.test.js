@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { thinYearLabels } from '../src/chart.js';
+import { thinYearLabels, thinYearTicks } from '../src/chart.js';
 
 const labels = (out) => out.map((t) => t.label);
 
@@ -74,4 +74,41 @@ test('thinYearLabels starts with a full year even when the first tick is not the
     ),
     ['2031', "'32"],
   );
+});
+
+test('thinYearLabels uses full years when the ticks span 100 years or more', () => {
+  const ticks = [2027, 2061, 2094, 2127].map((year, i) => ({ year, px: i * 40 }));
+  assert.deepEqual(labels(thinYearLabels(ticks, 36)), ['2027', '2061', '2094', '2127']);
+});
+
+test('thinYearLabels keeps short labels when the ticks span under 100 years', () => {
+  const ticks = [
+    { year: 2027, px: 0 },
+    { year: 2126, px: 100 },
+  ];
+  assert.deepEqual(labels(thinYearLabels(ticks, 36)), ['2027', "'26"]);
+});
+
+test('thinYearTicks drops ticks closer than minGapPx to the last kept tick', () => {
+  const ticks = [0, 1, 2, 2.5, 4.1, 10].map((px, i) => ({ year: 2027 + i, px }));
+  assert.deepEqual(
+    thinYearTicks(ticks, 2).map((t) => t.px),
+    [0, 2, 4.1, 10],
+  );
+  assert.deepEqual(thinYearTicks([], 2), []);
+});
+
+test('thinYearTicks defaults to a 2px gap and leaves well-spaced ticks unchanged', () => {
+  const ticks = [0, 2, 14, 40].map((px, i) => ({ year: 2027 + i, px }));
+  assert.deepEqual(thinYearTicks(ticks), ticks);
+});
+
+test('a 1 launch/year axis over 2,048 launches thins to spaced ticks and full-year labels', () => {
+  // 2,048 yearly ticks across a ~556 px plot, as with Custom 1 / 0% at 2,048 launches.
+  const ticks = Array.from({ length: 2048 }, (_, i) => ({ year: 2027 + i, px: 72 + (i * 556) / 2048 }));
+  const kept = thinYearTicks(ticks);
+  assert.ok(kept.length < 300, `${kept.length} ticks kept`);
+  for (let i = 1; i < kept.length; i++) assert.ok(kept[i].px - kept[i - 1].px >= 2);
+  const shown = thinYearLabels(kept, 36).filter((t) => t.label);
+  assert.ok(shown.every((t) => /^\d{4}$/.test(t.label)), JSON.stringify(shown.map((t) => t.label)));
 });
