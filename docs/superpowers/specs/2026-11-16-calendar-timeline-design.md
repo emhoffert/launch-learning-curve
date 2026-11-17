@@ -1,6 +1,6 @@
 # Calendar Timeline — Design
 
-Date: 2026-11-16 · Branch: `feature/calendar-timeline` · Status: draft for approval
+Date: 2026-11-16 · Branch: `feature/calendar-timeline` · Status: Approved 2026-11-16
 
 ## Intent
 
