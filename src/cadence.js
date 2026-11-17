@@ -14,6 +14,8 @@
 //
 // Dates are modeled dates, not forecasts.
 
+import { findTargetLaunch, targetLaunchCost } from './model.js';
+
 export const CADENCE_PRESETS = Object.freeze({
   conservative: Object.freeze({ firstYear: 36, growth: 0.15 }),
   base: Object.freeze({ firstYear: 56, growth: 0.3 }),
@@ -107,4 +109,33 @@ export function modeledDateLabel(fractionalYear) {
   const frac = fractionalYear - year + THIRD_EPSILON;
   const part = frac < 1 / 3 ? 'early' : frac < 2 / 3 ? 'mid' : 'late';
   return `${part} ${year}`;
+}
+
+// Milestone rows for the calendar panel: the $/kg ladder plus the target (when given), sorted
+// highest $/kg first. A target equal to a ladder value replaces that row, marked isTarget.
+// Dates use the single learning rate passed in; launch numbers come from the existing model.
+export function milestoneRows({ c1, lr, cadence, startYear, maxLaunches, targetPerKg = null }) {
+  const levels = LADDER_PER_KG.map((perKg) => ({ perKg, isTarget: false }));
+  if (targetPerKg !== null && targetPerKg !== undefined) {
+    const same = levels.find((l) => l.perKg === targetPerKg);
+    if (same) same.isTarget = true;
+    else levels.push({ perKg: targetPerKg, isTarget: true });
+  }
+  levels.sort((a, b) => b.perKg - a.perKg);
+
+  return levels.map(({ perKg, isTarget }) => {
+    const result = findTargetLaunch(c1, lr, targetLaunchCost(perKg));
+    if (result.status !== 'reached') {
+      return { perKg, isTarget, status: result.status, launch: null, date: null, beyondRange: false };
+    }
+    const { launch } = result;
+    return {
+      perKg,
+      isTarget,
+      status: 'reached',
+      launch,
+      date: modeledDateLabel(startYear + launchTime(launch, cadence)),
+      beyondRange: launch > maxLaunches,
+    };
+  });
 }

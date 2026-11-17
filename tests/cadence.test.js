@@ -11,6 +11,7 @@ import {
   launchesByTime,
   yearTicks,
   modeledDateLabel,
+  milestoneRows,
 } from '../src/cadence.js';
 
 const { conservative, base, aggressive } = CADENCE_PRESETS;
@@ -124,4 +125,71 @@ test('invalid inputs throw RangeError', () => {
   assert.throws(() => launchesByTime(-1, base), RangeError);
   assert.throws(() => launchesByTime(1, { firstYear: 0, growth: 0.3 }), RangeError);
   assert.throws(() => launchesByTime(1, { firstYear: 56, growth: -0.1 }), RangeError);
+});
+
+const DEFAULT_ARGS = { c1: 100, lr: 0.217, cadence: base, startYear: 2027, maxLaunches: 1024, targetPerKg: null };
+const rows = (overrides = {}) => milestoneRows({ ...DEFAULT_ARGS, ...overrides });
+
+test('milestone rows at the defaults with Base cadence', () => {
+  const reached = (perKg, launch, date, beyondRange = false) => ({
+    perKg,
+    isTarget: false,
+    status: 'reached',
+    launch,
+    date,
+    beyondRange,
+  });
+  assert.deepEqual(rows(), [
+    reached(500, 8, 'early 2027'),
+    reached(200, 96, 'mid 2028'),
+    reached(100, 682, 'late 2032'),
+    reached(50, 4859, 'mid 2039', true),
+  ]);
+});
+
+test('a target equal to a ladder value becomes that single row', () => {
+  const result = rows({ targetPerKg: 100 });
+  assert.equal(result.length, 4);
+  assert.deepEqual(
+    result.map((r) => [r.perKg, r.isTarget]),
+    [[500, false], [200, false], [100, true], [50, false]],
+  );
+});
+
+test('a target between ladder values is inserted in order', () => {
+  const result = rows({ targetPerKg: 150 });
+  assert.deepEqual(result.map((r) => r.perKg), [500, 200, 150, 100, 50]);
+  assert.deepEqual(result.filter((r) => r.isTarget).map((r) => r.perKg), [150]);
+});
+
+test('a target at or above the first-launch cost is met at launch 1', () => {
+  const target = rows({ targetPerKg: 2000 }).find((r) => r.isTarget);
+  assert.equal(target.perKg, 2000);
+  assert.equal(target.status, 'reached');
+  assert.equal(target.launch, 1);
+  assert.equal(target.date, 'early 2027');
+  assert.equal(target.beyondRange, false);
+});
+
+test('learning rate 0 leaves every row unreachable', () => {
+  for (const r of rows({ lr: 0 })) {
+    assert.deepEqual(
+      { status: r.status, launch: r.launch, date: r.date, beyondRange: r.beyondRange },
+      { status: 'unreachable', launch: null, date: null, beyondRange: false },
+    );
+  }
+});
+
+test('a tiny learning rate puts $50/kg beyond the search limit', () => {
+  const r50 = rows({ lr: 0.001 }).find((r) => r.perKg === 50);
+  assert.equal(r50.status, 'beyond-limit');
+  assert.equal(r50.launch, null);
+  assert.equal(r50.date, null);
+  assert.equal(r50.beyondRange, false);
+});
+
+test('a very slow Custom cadence prints "after 2100"', () => {
+  const r50 = rows({ cadence: { firstYear: 1, growth: 0 } }).find((r) => r.perKg === 50);
+  assert.equal(r50.launch, 4859);
+  assert.equal(r50.date, 'after 2100');
 });
