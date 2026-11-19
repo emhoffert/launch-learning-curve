@@ -10,13 +10,46 @@
     <main>
       <header>
         <h1>Launch Learning Curve Simulator</h1>
-        <p class="lede">
-          Wright's Law: each time cumulative launches double, the modeled cost per launch falls by the
-          learning rate. <code>cost(n) = C₁ × n<sup>b</sup></code>, where <code>b = log₂(1 − learning rate)</code>.
-        </p>
+        <details id="about" class="about">
+          <summary>About the model (Wright's Law)</summary>
+          <p class="lede">
+            Wright's Law: each time cumulative launches double, the modeled cost per launch falls by the
+            learning rate. <code>cost(n) = C₁ × n<sup>b</sup></code>, where <code>b = log₂(1 − learning rate)</code>.
+          </p>
+        </details>
       </header>
 
-      <section class="controls" aria-label="Model inputs">
+      <section class="chart-panel" aria-label="Learning curve">
+        <div class="chart-head">
+          <p class="chart-title">Modeled cost per launch <span class="muted">· $M left · $/kg right (100 t payload)</span></p>
+          <div class="seg" role="group" aria-label="Axis scale">
+            <button id="scale-linear" type="button" aria-pressed="true">Linear</button>
+            <button id="scale-log" type="button" aria-pressed="false">Log–log</button>
+          </div>
+        </div>
+        <svg id="chart" role="img" aria-label="Modeled cost per launch, and the equivalent cost per kilogram, versus cumulative launches"></svg>
+
+        <div class="headline">
+          <div class="headline-main">
+            <p class="headline-label" id="per-kg-label">Modeled cost per kg</p>
+            <p class="headline-value" id="per-kg"></p>
+          </div>
+          <p class="milestone-strip" id="milestone-strip"></p>
+        </div>
+        <details id="chart-help" class="disclosure">
+          <summary>How to read this chart</summary>
+          <p class="note">
+            Dots mark each doubling of cumulative launches (1, 2, 4, 8, …). The right axis shows the same cost per
+            kilogram, assuming an illustrative Starship payload of 100 t (100,000 kg) per launch.<span id="target-note" hidden> The dashed line is
+            the target cost; the shaded area is the gap above it until the target is first met.</span>
+          </p>
+          <p class="note">Cost per kg: launch cost ÷ 100,000 kg (illustrative Starship payload assumption).</p>
+        </details>
+        <p id="message" class="message" role="status" aria-live="polite"></p>
+      </section>
+
+      <section class="core" id="core" data-collapsed="true" aria-labelledby="core-heading">
+        <h2 class="section-title" id="core-heading">How does cost fall?</h2>
         <div class="field">
           <label for="lr-range">Learning rate (%)</label>
           <div class="paired">
@@ -24,110 +57,149 @@
             <input id="lr-number" type="number" min="0" max="50" step="0.1" aria-label="Learning rate (%)" />
           </div>
         </div>
-
-        <div class="field">
-          <label for="starting-cost">Starting launch cost, C₁ ($M)</label>
-          <input id="starting-cost" type="number" min="0" step="any" />
+        <div class="more-inputs-row">
+          <button id="more-inputs-toggle" class="linkbtn" type="button" aria-expanded="false" aria-controls="more-inputs">Starting cost, launches shown, reset</button>
+          <span class="muted small" id="more-inputs-summary"></span>
         </div>
-
-        <div class="field">
-          <label for="max-launches">
-            Cumulative launches shown: <output id="max-launches-value" for="max-launches"></output>
-          </label>
-          <input id="max-launches" type="range" min="10" max="2048" step="1" />
-        </div>
-
-        <div class="field inline">
-          <input id="log-scale" type="checkbox" />
-          <label for="log-scale">Log–log axes (Wright's Law becomes a straight line)</label>
-        </div>
-
-        <div class="field inline">
-          <input id="show-target" type="checkbox" aria-controls="target-field target-panel" />
-          <label for="show-target">Show target cost and modeled learning subsidy</label>
-        </div>
-
-        <div class="field" id="target-field" hidden>
-          <label for="target-cost">Target cost ($/kg)</label>
-          <input id="target-cost" type="number" min="0" step="any" />
-        </div>
-
-        <div class="field inline">
-          <input id="show-mc" type="checkbox" aria-controls="mc-field mc-panel" />
-          <label for="show-mc">Show uncertainty (Monte Carlo)</label>
-        </div>
-
-        <div class="field" id="mc-field" hidden>
-          <label for="lr-sd">Learning-rate uncertainty (± percentage points, 1σ)</label>
-          <input id="lr-sd" type="number" min="0" max="20" step="0.1" aria-describedby="lr-sd-hint" />
-          <p class="hint" id="lr-sd-hint"></p>
-        </div>
-
-        <div class="field inline">
-          <input id="show-calendar" type="checkbox" aria-controls="calendar-field calendar-panel" />
-          <label for="show-calendar">Show calendar timeline (modeled dates)</label>
-        </div>
-
-        <div class="field calendar-field" id="calendar-field" hidden>
+        <div id="more-inputs" class="more-inputs">
           <div class="field">
-            <label for="start-year">Start year</label>
-            <input id="start-year" type="number" min="2027" max="2040" step="1" />
+            <label for="starting-cost">Starting launch cost, C₁ ($M)</label>
+            <input id="starting-cost" type="number" min="0" step="any" />
           </div>
           <div class="field">
-            <label for="cadence-scenario">Cadence scenario</label>
-            <select id="cadence-scenario">
-              <option value="conservative">Conservative</option>
-              <option value="base">Base</option>
-              <option value="aggressive">Aggressive</option>
-              <option value="custom">Custom</option>
-            </select>
+            <label for="max-launches">
+              Cumulative launches shown: <output id="max-launches-value" for="max-launches"></output>
+            </label>
+            <input id="max-launches" type="range" min="10" max="2048" step="1" />
           </div>
-          <div class="field">
-            <label for="first-year-launches">First-year launches</label>
-            <input id="first-year-launches" type="number" min="1" max="1000" step="1" />
-          </div>
-          <div class="field">
-            <label for="annual-growth">Annual growth (%)</label>
-            <input id="annual-growth" type="number" min="0" max="100" step="0.1" />
-          </div>
-          <p class="cadence-note" id="cadence-note-2027">
-            <strong>2027 assumption:</strong> the first-year rates are anchored to SpaceX's stated 2027 Starship
-            cadence targets (weekly in H1, two or more a week by late 2027; Oct 2026)<span id="cadence-delay" hidden>,
-            delayed to <span id="cadence-delay-year"></span></span>. Those are targets, not commitments.
-          </p>
-          <p class="cadence-note" id="cadence-note-growth">
-            <strong><span id="cadence-growth-year">2028</span> onward:</strong> the growth rates are our illustrative
-            modeling assumptions and are uncapped.
-          </p>
+          <details id="model-details" class="disclosure">
+            <summary>Model details</summary>
+            <dl class="readouts">
+              <div><dt>Progress ratio</dt><dd id="progress-ratio"></dd></div>
+              <div><dt>Exponent b</dt><dd id="exponent"></dd></div>
+              <div><dt id="final-label">Cost of final launch</dt><dd id="final-cost"></dd></div>
+              <div><dt>Reduction from launch 1</dt><dd id="reduction"></dd></div>
+            </dl>
+          </details>
+          <button id="reset" type="button">Reset to defaults</button>
         </div>
-
-        <button id="reset" type="button">Reset to defaults</button>
-        <p id="message" class="message" role="status" aria-live="polite"></p>
       </section>
 
-      <section class="chart-panel" aria-label="Learning curve">
-        <svg id="chart" role="img" aria-label="Modeled cost per launch, and the equivalent cost per kilogram, versus cumulative launches"></svg>
-        <p class="note">
-          Dots mark each doubling of cumulative launches (1, 2, 4, 8, …). The right axis shows the same cost per
-          kilogram, assuming an illustrative Starship payload of 100 t (100,000 kg) per launch.<span id="target-note" hidden> The dashed line is
-          the target cost; the shaded area is the gap above it until the target is first met.</span>
-        </p>
-
-        <div class="headline">
-          <p class="headline-label" id="per-kg-label">Modeled cost per kg</p>
-          <p class="headline-value" id="per-kg"></p>
-          <p class="headline-note">Launch cost ÷ 100,000 kg (illustrative Starship payload assumption)</p>
+      <aside class="deeper" aria-labelledby="deeper-heading">
+        <h2 class="section-title" id="deeper-heading">Go deeper</h2>
+        <div class="cards">
+          <button id="when-card" class="acard when" type="button" data-state="add" aria-expanded="false" aria-controls="when-editor">
+            <span class="card-add"><span class="plus">+ When?</span> <span class="promise">Pick a target cost and see roughly when it's reached</span></span>
+            <span class="card-result"><span class="card-k"></span> <span class="card-v"></span> <span class="card-sub"></span></span>
+            <span class="card-error">Check input</span>
+          </button>
+          <button id="sure-card" class="acard sure" type="button" data-state="add" aria-expanded="false" aria-controls="sure-editor">
+            <span class="card-add"><span class="plus">+ How sure?</span> <span class="promise">See the chance of hitting it if learning is uncertain</span></span>
+            <span class="card-result"><span class="card-k"></span> <span class="card-v"></span> <span class="card-sub"></span></span>
+            <span class="card-error">Check input</span>
+          </button>
         </div>
 
-        <dl class="readouts">
-          <div><dt>Progress ratio</dt><dd id="progress-ratio"></dd></div>
-          <div><dt>Exponent b</dt><dd id="exponent"></dd></div>
-          <div><dt id="final-label">Cost of final launch</dt><dd id="final-cost"></dd></div>
-          <div><dt>Reduction from launch 1</dt><dd id="reduction"></dd></div>
-        </dl>
+        <section class="editor when" id="when-editor" aria-labelledby="when-heading" hidden>
+          <div class="editor-head">
+            <h2 id="when-heading" tabindex="-1">When could we reach a cost?</h2>
+            <label class="switch"><input id="show-target" type="checkbox" aria-label="On: When could we reach a cost?" />On</label>
+          </div>
+          <div class="field" id="target-field">
+            <label for="target-cost">Target cost ($/kg)</label>
+            <input id="target-cost" type="number" min="0" step="any" />
+          </div>
+          <dl class="readouts when-result">
+            <div><dt>Target cost</dt><dd id="target-readout"></dd></div>
+            <div><dt>Target first achieved</dt><dd id="target-launch"></dd></div>
+            <div id="target-date-row"><dt>Modeled date</dt><dd id="target-date"></dd></div>
+          </dl>
+          <table class="calendar-table" id="milestone-table">
+            <caption class="sr-only">Milestone progression</caption>
+            <thead>
+              <tr><th scope="col">$/kg</th><th scope="col">Launch</th><th scope="col">Modeled date</th></tr>
+            </thead>
+            <tbody id="calendar-rows"></tbody>
+          </table>
+          <label class="switch"><input id="show-calendar" type="checkbox" aria-controls="calendar-field" />Calendar dates</label>
+          <div class="calendar-field" id="calendar-field" hidden>
+            <div class="cadence-row">
+              <span><strong id="cadence-summary"></strong></span>
+              <button id="cadence-change" class="linkbtn" type="button" aria-expanded="false" aria-controls="cadence-inputs">Change</button>
+            </div>
+            <div id="cadence-inputs" class="cadence-inputs" hidden>
+              <div class="field">
+                <label for="start-year">Start year</label>
+                <input id="start-year" type="number" min="2027" max="2040" step="1" />
+              </div>
+              <div class="field">
+                <label for="cadence-scenario">Cadence scenario</label>
+                <select id="cadence-scenario">
+                  <option value="conservative">Conservative</option>
+                  <option value="base">Base</option>
+                  <option value="aggressive">Aggressive</option>
+                  <option value="custom">Custom</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="first-year-launches">First-year launches</label>
+                <input id="first-year-launches" type="number" min="1" max="1000" step="1" />
+              </div>
+              <div class="field">
+                <label for="annual-growth">Annual growth (%)</label>
+                <input id="annual-growth" type="number" min="0" max="100" step="0.1" />
+              </div>
+            </div>
+            <dl class="assumptions">
+              <dt id="short-first-year">2027</dt><dd>Anchored to SpaceX's stated targets</dd>
+              <dt><span id="cadence-growth-year">2028</span>+</dt><dd>Our illustrative growth, uncapped</dd>
+            </dl>
+            <p class="small muted">Modeled dates, not forecasts.</p>
+            <details id="calendar-details" class="disclosure">
+              <summary>Details</summary>
+              <p class="cadence-note" id="cadence-note-2027">
+                <strong>2027 assumption:</strong> the first-year rates are anchored to SpaceX's stated 2027 Starship
+                cadence targets (weekly in H1, two or more a week by late 2027; Oct 2026)<span id="cadence-delay" hidden>,
+                delayed to <span id="cadence-delay-year"></span></span>. Those are targets, not commitments.
+              </p>
+              <p class="cadence-note" id="cadence-note-growth">
+                <strong><span id="cadence-growth-year-note">2028</span> onward:</strong> the growth rates are our illustrative
+                modeling assumptions and are uncapped.
+              </p>
+              <p class="note">
+                <strong>These are modeled dates</strong>, the result of the selected learning rate and cadence scenario.
+                They are not forecasts. Launch 1 is assumed to happen at the start of
+                <span id="calendar-start-year">2027</span>; test flights before then aren't counted.<span id="calendar-mc-note" hidden>
+                With uncertainty on, the dates use the expected learning rate; the Monte Carlo bands are not reflected in
+                them.</span>
+              </p>
+            </details>
+          </div>
+          <details id="more-analysis" class="disclosure">
+            <summary>More analysis</summary>
+            <dl class="readouts">
+              <div><dt>Launches required from launch 1</dt><dd id="target-count"></dd></div>
+              <div class="target-subsidy"><dt>Modeled learning subsidy</dt><dd id="subsidy"></dd></div>
+            </dl>
+            <p class="note">
+              <strong>Modeled learning subsidy</strong> assumes someone funds the difference between the modeled launch
+              cost and the target launch cost for each launch, from launch 1 until the target is reached: the sum of
+              max(modeled cost − target cost, 0) over those launches. It is not an estimate of an economically optimal
+              subsidy.
+            </p>
+          </details>
+        </section>
 
-        <section class="target-panel" id="mc-panel" aria-labelledby="mc-heading" hidden>
-          <h2 id="mc-heading">Uncertainty (Monte Carlo)</h2>
+        <section class="editor sure" id="sure-editor" aria-labelledby="sure-heading" hidden>
+          <div class="editor-head">
+            <h2 id="sure-heading" tabindex="-1">How sure is this?</h2>
+            <label class="switch"><input id="show-mc" type="checkbox" aria-label="On: How sure is this?" />On</label>
+          </div>
+          <div class="field" id="mc-field">
+            <label for="lr-sd">Learning-rate uncertainty (± percentage points, 1σ)</label>
+            <input id="lr-sd" type="number" min="0" max="20" step="0.1" aria-describedby="lr-sd-hint" />
+            <p class="hint" id="lr-sd-hint"></p>
+          </div>
           <p class="mc-legend">
             <span class="swatch median"></span> Median
             <span class="swatch inner"></span> 25th–75th percentile
@@ -136,51 +208,22 @@
           <dl class="readouts">
             <div class="mc-probability"><dt id="mc-prob-label">Probability of reaching the target</dt><dd id="mc-prob"></dd></div>
           </dl>
-          <p class="note">
-            <strong>Probabilities are conditional on the assumed probability model</strong>, not forecasts of real
-            launch costs. <span id="mc-runs">10,000</span> simulations each draw one learning rate from a normal
-            distribution centered on the expected learning rate (1σ = the uncertainty in percentage points) and
-            truncated to the valid 0%–100% range (0% ≤ LR &lt; 100%), and use it for the whole curve. Draws outside
-            that range are redrawn, never clamped. Negative learning, where costs would rise with experience, is
-            excluded in this version. A fixed random seed makes
-            the results reproducible. Because the distribution is symmetric, the median closely tracks the
-            single-learning-rate curve. All other readouts use the single learning rate above.
-          </p>
+          <p class="small muted">Bands show 10,000 simulated learning rates. Dates use the expected rate.</p>
+          <details id="mc-details" class="disclosure">
+            <summary>Details</summary>
+            <p class="note">
+              <strong>Probabilities are conditional on the assumed probability model</strong>, not forecasts of real
+              launch costs. <span id="mc-runs">10,000</span> simulations each draw one learning rate from a normal
+              distribution centered on the expected learning rate (1σ = the uncertainty in percentage points) and
+              truncated to the valid 0%–100% range (0% ≤ LR &lt; 100%), and use it for the whole curve. Draws outside
+              that range are redrawn, never clamped. Negative learning, where costs would rise with experience, is
+              excluded in this version. A fixed random seed makes
+              the results reproducible. Because the distribution is symmetric, the median closely tracks the
+              single-learning-rate curve. All other readouts use the single learning rate above.
+            </p>
+          </details>
         </section>
-
-        <section class="target-panel" id="target-panel" aria-labelledby="target-heading" hidden>
-          <h2 id="target-heading">Target cost and modeled learning subsidy</h2>
-          <dl class="readouts">
-            <div><dt>Target cost</dt><dd id="target-readout"></dd></div>
-            <div><dt>Target first achieved</dt><dd id="target-launch"></dd></div>
-            <div><dt>Launches required from launch 1</dt><dd id="target-count"></dd></div>
-            <div class="target-subsidy"><dt>Modeled learning subsidy</dt><dd id="subsidy"></dd></div>
-          </dl>
-          <p class="note">
-            <strong>Modeled learning subsidy</strong> assumes someone funds the difference between the modeled launch
-            cost and the target launch cost for each launch, from launch 1 until the target is reached: the sum of
-            max(modeled cost − target cost, 0) over those launches. It is not an estimate of an economically optimal
-            subsidy.
-          </p>
-        </section>
-
-        <section class="target-panel" id="calendar-panel" aria-labelledby="calendar-heading" hidden>
-          <h2 id="calendar-heading">Calendar timeline</h2>
-          <table class="calendar-table">
-            <thead>
-              <tr><th scope="col">$/kg</th><th scope="col">Launch</th><th scope="col">Modeled date</th></tr>
-            </thead>
-            <tbody id="calendar-rows"></tbody>
-          </table>
-          <p class="note">
-            <strong>These are modeled dates</strong>, the result of the selected learning rate and cadence scenario.
-            They are not forecasts. Launch 1 is assumed to happen at the start of
-            <span id="calendar-start-year">2027</span>; test flights before then aren't counted.<span id="calendar-mc-note" hidden>
-            With uncertainty on, the dates use the expected learning rate; the Monte Carlo bands are not reflected in
-            them.</span>
-          </p>
-        </section>
-      </section>
+      </aside>
     </main>
 
     <script type="module" src="src/main.js"></script>

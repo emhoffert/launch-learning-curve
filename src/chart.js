@@ -164,7 +164,12 @@ export function renderChart(
     svg.append(calendarAxis(calendar.label, ticks, x, { plotLeft, plotRight, plotTop }, narrow ? 30 : 36));
   }
   svg.append(curve);
-  if (target) svg.append(targetOverlay(target, x, y, { plotLeft, plotRight, plotBottom }, maxLaunches));
+  if (target) {
+    // On narrow linear charts the corner where the curve meets the target line is crowded, so
+    // the labels move up into the open space above the curve (or the top band) with leaders.
+    const upper = narrow && !useLog ? (bands ? bands.p95 : series) : null;
+    svg.append(targetOverlay(target, x, y, { plotLeft, plotRight, plotTop, plotBottom }, maxLaunches, upper));
+  }
   svg.append(doublings);
 }
 
@@ -245,10 +250,13 @@ function targetShading(series, target, x, y) {
 
 // Dashed target line with its label, plus a marker and vertical guide at the target launch
 // when it falls inside the displayed range.
-function targetOverlay(target, x, y, { plotLeft, plotRight, plotBottom }, maxLaunches) {
+function targetOverlay(target, x, y, { plotLeft, plotRight, plotTop, plotBottom }, maxLaunches, upper) {
   const group = el('g', { class: 'target' });
   const ty = y(target.cost);
   group.append(el('line', { x1: plotLeft, x2: plotRight, y1: ty, y2: ty, class: 'target-line' }));
+
+  const inRange = target.launch !== null && target.launch > 1 && target.launch <= maxLaunches;
+  const lifted = upper && inRange && liftedLabels(target, upper, x, y, ty, { plotLeft, plotRight, plotTop });
 
   // Label below the left end of the line, clear of the curve, which starts above the target.
   // If the target is met at launch 1 the whole curve is below it, so label above the right end.
@@ -256,7 +264,7 @@ function targetOverlay(target, x, y, { plotLeft, plotRight, plotBottom }, maxLau
   const room = plotBottom - ty;
   const above = metAtStart || room < 18;
   const targetText = `Target ${formatCostPerKg(target.perKg)}`;
-  group.append(
+  if (!lifted) group.append(
     el(
       'text',
       {
@@ -274,6 +282,11 @@ function targetOverlay(target, x, y, { plotLeft, plotRight, plotBottom }, maxLau
     group.append(el('line', { x1: mx, x2: mx, y1: ty, y2: plotBottom, class: 'target-guide' }));
     const marker = el('circle', { cx: mx, cy: ty, r: 5.5, class: 'target-marker' });
     marker.append(el('title', {}, `Target first met at launch ${target.launch.toLocaleString('en-US')}`));
+    if (lifted) {
+      drawLifted(group, lifted, mx, ty);
+      group.append(marker);
+      return group;
+    }
     group.append(marker);
     const text = `Launch ${target.launch.toLocaleString('en-US')}`;
     const spot = launchLabelPosition(text, targetText, mx, ty, above, plotLeft, plotRight, plotBottom);
@@ -302,4 +315,71 @@ function launchLabelPosition(text, targetText, mx, ty, targetAbove, plotLeft, pl
     return { x: mx + 8, y: ty - 8, 'text-anchor': 'start' };
   }
   return null;
+}
+
+// Narrow linear charts: places "Launch N" just above the curve (or top band) at the target
+// launch and "Target $X/kg" in the open space above it, each with a dotted leader back to the
+// marker or the target line. Returns null when they don't fit, and the caller falls back.
+const LABEL_ASCENT = 11; // 12px bold text: baseline to top
+const LABEL_DESCENT = 3;
+function liftedLabels(target, upper, x, y, ty, { plotLeft, plotRight, plotTop }) {
+  const mx = x(target.launch);
+  const minTop = plotTop + 4;
+  // Highest drawn point (smallest y) of the upper curve over [a, b], with room for the doubling
+  // dots. Includes the last point left of a, since the segment from it runs into the span.
+  const ceiling = (a, b) => {
+    let top = Infinity;
+    let before = null;
+    for (const p of upper) {
+      const px = x(p.n);
+      if (px < a - 6) before = p;
+      else if (px <= b + 6) top = Math.min(top, y(p.cost));
+    }
+    if (before) top = Math.min(top, y(before.cost));
+    return top - 5;
+  };
+
+  const launchText = `Launch ${target.launch.toLocaleString('en-US')}`;
+  const lw = launchText.length * 7;
+  // Centred over the marker when it fits, else beside the leader on whichever side has room.
+  const candidates = [
+    { anchor: 'middle', l: mx - lw / 2, r: mx + lw / 2 },
+    { anchor: 'start', l: mx + 6, r: mx + 6 + lw },
+    { anchor: 'end', l: mx - 6 - lw, r: mx - 6 },
+  ].filter((c) => c.l >= plotLeft + 4 && c.r <= plotRight - 4);
+  let launch = null;
+  for (const c of candidates) {
+    const baseline = ceiling(c.l, c.r) - 6 - LABEL_DESCENT;
+    if (baseline - LABEL_ASCENT >= minTop && baseline < ty - 12) {
+      launch = { ...c, baseline, x: c.anchor === 'middle' ? mx : c.anchor === 'start' ? c.l : c.r };
+      break;
+    }
+  }
+  if (!launch) return null;
+
+  const targetText = `Target ${formatCostPerKg(target.perKg)}`;
+  const tw = targetText.length * 7;
+  const tr = plotRight - 6;
+  const tl = tr - tw;
+  if (tl < plotLeft + 4) return null;
+  // Above the launch label (and its leader) if the two share any columns, else above the curve.
+  const shares = tl - 6 < Math.max(launch.r, mx) && tr + 6 > Math.min(launch.l, mx);
+  const launchTop = launch.baseline - LABEL_ASCENT;
+  const baseline = Math.min(ceiling(tl, tr) - 6 - LABEL_DESCENT, shares ? launchTop - 6 - LABEL_DESCENT : Infinity);
+  if (baseline - LABEL_ASCENT < minTop) return null;
+  // The target leader drops to the line from one end of the label, clear of the launch label
+  // and its leader.
+  const clear = (lx) => Math.abs(lx - mx) >= 10 && (lx < launch.l - 6 || lx > launch.r + 6);
+  const leaderX = [tr - 4, tl + 4].find(clear);
+  if (leaderX === undefined) return null;
+  return { launch: { ...launch, text: launchText }, target: { x: tr, baseline, text: targetText, leaderX } };
+}
+
+function drawLifted(group, { launch, target: t }, mx, ty) {
+  group.append(el('line', { x1: t.leaderX, x2: t.leaderX, y1: t.baseline + LABEL_DESCENT + 2, y2: ty, class: 'target-guide target-leader' }));
+  group.append(el('text', { x: t.x, y: t.baseline, 'text-anchor': 'end', class: 'target-label' }, t.text));
+  // The launch leader continues the guide up from the marker to the launch label.
+  const leaderTop = launch.anchor === 'middle' ? launch.baseline + LABEL_DESCENT + 2 : launch.baseline - 4;
+  group.append(el('line', { x1: mx, x2: mx, y1: leaderTop, y2: ty, class: 'target-guide target-leader' }));
+  group.append(el('text', { x: launch.x, y: launch.baseline, 'text-anchor': launch.anchor, class: 'target-label' }, launch.text));
 }
