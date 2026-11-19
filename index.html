@@ -36,6 +36,11 @@
           </div>
           <p class="milestone-strip" id="milestone-strip"></p>
         </div>
+        <!-- Mobile only: points to the Go deeper cards further down the page. -->
+        <a id="go-deeper-link" class="go-deeper-link" href="#deeper-heading">
+          <span class="go-deeper-title">Go deeper <span aria-hidden="true">↓</span></span>
+          <span class="go-deeper-preview">When could we reach a cost? · How sure is this?</span>
+        </a>
         <details id="chart-help" class="disclosure">
           <summary>How to read this chart</summary>
           <p class="note">
@@ -86,7 +91,7 @@
       </section>
 
       <aside class="deeper" aria-labelledby="deeper-heading">
-        <h2 class="section-title" id="deeper-heading">Go deeper</h2>
+        <h2 class="section-title" id="deeper-heading" tabindex="-1">Go deeper</h2>
         <div class="cards">
           <button id="when-card" class="acard when" type="button" data-state="add" aria-expanded="false" aria-controls="when-editor">
             <span class="card-add"><span class="plus">+ When?</span> <span class="promise">Pick a target cost and see roughly when it's reached</span></span>

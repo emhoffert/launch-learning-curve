@@ -455,6 +455,14 @@ controls.scaleLinear.addEventListener('click', () => { setScale(false); update()
 controls.scaleLog.addEventListener('click', () => { setScale(true); update(); });
 controls.moreInputsToggle.addEventListener('click', () => setCoreCollapsed(core.dataset.collapsed !== 'true'));
 controls.cadenceChange.addEventListener('click', () => setCadenceInputsOpen(cadenceInputs.hidden));
+// Mobile "Go deeper" row: scroll to the cards and put focus there, without turning anything on.
+document.getElementById('go-deeper-link').addEventListener('click', (event) => {
+  event.preventDefault();
+  const heading = document.getElementById('deeper-heading');
+  const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  heading.closest('.deeper').scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'start' });
+  heading.focus({ preventScroll: true });
+});
 for (const [name, { card, heading, toggle }] of Object.entries(cards)) {
   card.addEventListener('click', () => {
     if (!toggle.checked) {
