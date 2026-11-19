@@ -8,6 +8,13 @@
   --accent: #2f6fdf;
   --error: #b42318;
   --target: #0f766e;
+  --focus: #1d4ed8;
+  --add-bg: #f6f8fe;
+  --add-border: #7d9de8;
+  --when-bg: #e7f6f3;
+  --when-border: #bfe3dc;
+  --sure-bg: #eef3fe;
+  --sure-border: #c3d4fa;
   color-scheme: light;
 }
 
@@ -22,6 +29,13 @@
     --accent: #6ea1ff;
     --error: #ff8a80;
     --target: #2dd4bf;
+    --focus: #8ab4ff;
+    --add-bg: #1c2433;
+    --add-border: #5b7fc7;
+    --when-bg: #12312d;
+    --when-border: #2a6b62;
+    --sure-bg: #1a2640;
+    --sure-border: #3d5a99;
     color-scheme: dark;
   }
 }
@@ -41,26 +55,7 @@ body {
   font: 16px/1.5 system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
-main {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 24px 16px 48px;
-  display: grid;
-  grid-template-columns: 300px 1fr;
-  grid-template-areas:
-    'header header'
-    'controls chart';
-  gap: 24px;
-}
 
-header {
-  grid-area: header;
-}
-
-h1 {
-  margin: 0 0 8px;
-  font-size: 1.6rem;
-}
 
 .lede {
   margin: 0;
@@ -73,26 +68,8 @@ code {
   font-size: 0.9em;
 }
 
-.controls,
-.chart-panel {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 20px;
-}
 
-.controls {
-  grid-area: controls;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  align-self: start;
-}
 
-.chart-panel {
-  grid-area: chart;
-  min-width: 0;
-}
 
 .field {
   display: flex;
@@ -198,8 +175,7 @@ button:hover {
 
 .chart-panel.stale #chart,
 .chart-panel.stale .headline,
-.chart-panel.stale .readouts,
-.chart-panel.stale .target-panel {
+.chart-panel.stale .milestone-strip {
   opacity: 0.35;
   transition: opacity 0.15s;
 }
@@ -463,16 +439,495 @@ button:hover {
   font-variant-numeric: tabular-nums;
 }
 
-@media (max-width: 800px) {
-  main {
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      'header'
-      'controls'
-      'chart';
+
+/* ---------- Layout ----------
+   Breakpoints come from content minimums, not device sizes:
+   - Three columns (core 272px | chart >= 560px | Go deeper 344px) need about
+     272 + 560 + 344 + gaps and padding = 1240px = 77.5rem.
+   - Two columns (chart >= 480px | 320px rail) need about 860px = 61rem.
+   - Below that, one column with normal page scroll (mobile).
+   At the two desktop layouts, when the viewport is at least 700px tall, the page is a
+   fixed-height workspace: panels scroll internally and the page itself does not. */
+
+main {
+  display: grid;
+  gap: 12px;
+  padding: 12px 16px 32px;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: 'header' 'chart' 'core' 'deeper';
+}
+
+header {
+  grid-area: header;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 16px;
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.about {
+  max-width: 70ch;
+}
+
+.about[open] {
+  flex-basis: 100%;
+}
+
+.chart-panel,
+.core,
+.deeper {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  min-width: 0;
+}
+
+.chart-panel {
+  grid-area: chart;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.core {
+  grid-area: core;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.deeper {
+  grid-area: deeper;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.section-title {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.small {
+  font-size: 0.875rem;
+}
+
+p.small {
+  margin: 0;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Chart header and scale control */
+.chart-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.chart-title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.chart-title .muted {
+  font-weight: 400;
+  font-size: 0.875rem;
+}
+
+.seg {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.seg button {
+  border: 0;
+  border-radius: 0;
+  background: var(--surface);
+  min-height: 36px;
+}
+
+.seg button[aria-pressed='true'] {
+  background: var(--text);
+  color: var(--surface);
+}
+
+/* Headline */
+.headline {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 24px;
+}
+
+.milestone-strip {
+  margin: 0;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Disclosures and link-style buttons */
+.disclosure > summary,
+.about > summary {
+  cursor: pointer;
+  color: var(--accent);
+  font-size: 0.9rem;
+  min-height: 36px;
+  display: list-item;
+  padding: 6px 0;
+}
+
+.disclosure[open] > summary {
+  margin-bottom: 4px;
+}
+
+.linkbtn {
+  border: 0;
+  background: none;
+  padding: 0 2px;
+  color: var(--accent);
+  text-decoration: underline;
+  min-height: 36px;
+  align-self: auto;
+}
+
+.more-inputs-row,
+.cadence-row,
+.editor-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 12px;
+}
+
+.more-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.core[data-collapsed='true'] .more-inputs {
+  display: none;
+}
+
+input[type='number'],
+select,
+button {
+  min-height: 36px;
+}
+
+.switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 400;
+  min-height: 36px;
+  cursor: pointer;
+}
+
+.switch input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+}
+
+/* Cards */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.acard {
+  display: block;
+  width: 100%;
+  min-height: 96px;
+  padding: 12px;
+  text-align: left;
+  border-radius: 12px;
+  border: 1.5px dashed var(--add-border);
+  background: var(--add-bg);
+}
+
+.acard .card-add,
+.acard .card-result {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.acard .card-result,
+.acard .card-error {
+  display: none;
+}
+
+.acard .plus {
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.acard .promise,
+.acard .card-k,
+.acard .card-sub {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.acard .card-v {
+  font-size: 1.35rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.acard[data-state='active'],
+.acard[data-state='error'] {
+  border-style: solid;
+}
+
+.acard.when[data-state='active'] {
+  background: var(--when-bg);
+  border-color: var(--when-border);
+}
+
+.acard.sure[data-state='active'] {
+  background: var(--sure-bg);
+  border-color: var(--sure-border);
+}
+
+.acard.when[data-state='active'] .card-k {
+  color: var(--target);
+  font-weight: 600;
+}
+
+.acard[data-state='active'] .card-add,
+.acard[data-state='error'] .card-add {
+  display: none;
+}
+
+.acard[data-state='active'] .card-result {
+  display: flex;
+}
+
+.acard[data-state='error'] {
+  border-color: var(--error);
+}
+
+.acard[data-state='error'] .card-error {
+  display: block;
+  color: var(--error);
+  font-weight: 600;
+}
+
+.acard[aria-expanded='true'] {
+  border-width: 2px;
+  border-color: var(--accent);
+  box-shadow: 0 2px 8px rgb(29 78 216 / 0.18);
+}
+
+.acard.when[aria-expanded='true'][data-state='active'] {
+  border-color: var(--target);
+}
+
+/* Editors */
+.editor {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.editor.when {
+  border-color: var(--target);
+}
+
+.editor h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.when-result {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.when-result dd {
+  font-size: 1.05rem;
+}
+
+.deeper .readouts {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.deeper .when-result {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.readouts .mc-probability {
+  grid-column: 1 / -1;
+}
+
+.calendar-table {
+  font-size: 0.95rem;
+}
+
+.calendar-table .calendar-target th,
+.calendar-table .calendar-target td {
+  background: var(--when-bg);
+}
+
+.calendar-table.no-dates th:nth-child(3),
+.calendar-table.no-dates td:nth-child(3) {
+  display: none;
+}
+
+.assumptions {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 10px;
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.assumptions dt {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.assumptions dd {
+  margin: 0;
+}
+
+.cadence-inputs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.core .readouts {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* Focus: always visible for keyboard users */
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.editor h2:focus {
+  outline: none;
+}
+
+.editor h2:focus-visible {
+  outline: 3px solid var(--focus);
+}
+
+/* Mobile and touch: 44px targets */
+@media (max-width: 60.99rem) {
+  input[type='number'],
+  select,
+  button,
+  .linkbtn,
+  .switch,
+  .disclosure > summary,
+  .about > summary {
+    min-height: 44px;
   }
 
-  .readouts {
-    grid-template-columns: repeat(2, 1fr);
+  .seg button {
+    min-height: 40px;
+  }
+
+  input[type='range'] {
+    height: 28px;
+  }
+
+  .headline-value {
+    font-size: 1.7rem;
+  }
+}
+
+/* Two columns: chart | rail (core above Go deeper) */
+@media (min-width: 61rem) {
+  main {
+    grid-template-columns: minmax(480px, 1fr) 320px;
+    grid-template-rows: auto minmax(0, max-content) minmax(0, 1fr);
+    grid-template-areas:
+      'header header'
+      'chart core'
+      'chart deeper';
+    padding: 12px 16px;
+  }
+}
+
+/* Three columns: core | chart | Go deeper */
+@media (min-width: 77.5rem) {
+  main {
+    max-width: 1680px;
+    margin: 0 auto;
+    grid-template-columns: 272px minmax(560px, 1fr) 344px;
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas:
+      'header header header'
+      'core chart deeper';
+    gap: 16px;
+    padding: 16px;
+  }
+
+  .core .more-inputs-row button {
+    display: none;
+  }
+
+  .core[data-collapsed='true'] .more-inputs {
+    display: flex;
+  }
+
+  .core .more-inputs-row {
+    display: none;
+  }
+}
+
+/* Fixed-height workspace on desktop-sized viewports */
+@media (min-width: 61rem) and (min-height: 700px) {
+  main {
+    height: 100vh;
+    height: 100dvh;
+    box-sizing: border-box;
+  }
+
+  .chart-panel,
+  .core,
+  .deeper {
+    min-height: 0;
+    overflow: auto;
   }
 }

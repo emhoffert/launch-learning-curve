@@ -28,11 +28,6 @@
           </div>
         </div>
         <svg id="chart" role="img" aria-label="Modeled cost per launch, and the equivalent cost per kilogram, versus cumulative launches"></svg>
-        <p class="note">
-          Dots mark each doubling of cumulative launches (1, 2, 4, 8, …). The right axis shows the same cost per
-          kilogram, assuming an illustrative Starship payload of 100 t (100,000 kg) per launch.<span id="target-note" hidden> The dashed line is
-          the target cost; the shaded area is the gap above it until the target is first met.</span>
-        </p>
 
         <div class="headline">
           <div class="headline-main">
@@ -41,7 +36,15 @@
           </div>
           <p class="milestone-strip" id="milestone-strip"></p>
         </div>
-        <p class="headline-note">Launch cost ÷ 100,000 kg (illustrative Starship payload assumption)</p>
+        <details id="chart-help" class="disclosure">
+          <summary>How to read this chart</summary>
+          <p class="note">
+            Dots mark each doubling of cumulative launches (1, 2, 4, 8, …). The right axis shows the same cost per
+            kilogram, assuming an illustrative Starship payload of 100 t (100,000 kg) per launch.<span id="target-note" hidden> The dashed line is
+            the target cost; the shaded area is the gap above it until the target is first met.</span>
+          </p>
+          <p class="note">Cost per kg: launch cost ÷ 100,000 kg (illustrative Starship payload assumption).</p>
+        </details>
         <p id="message" class="message" role="status" aria-live="polite"></p>
       </section>
 
@@ -101,7 +104,7 @@
         <section class="editor when" id="when-editor" aria-labelledby="when-heading" hidden>
           <div class="editor-head">
             <h2 id="when-heading" tabindex="-1">When could we reach a cost?</h2>
-            <label class="switch"><input id="show-target" type="checkbox" aria-label="On: When could we reach a cost?" /><span class="track" aria-hidden="true"></span> On</label>
+            <label class="switch"><input id="show-target" type="checkbox" aria-label="On: When could we reach a cost?" />On</label>
           </div>
           <div class="field" id="target-field">
             <label for="target-cost">Target cost ($/kg)</label>
@@ -119,7 +122,7 @@
             </thead>
             <tbody id="calendar-rows"></tbody>
           </table>
-          <label class="switch"><input id="show-calendar" type="checkbox" aria-controls="calendar-field" /><span class="track" aria-hidden="true"></span> Calendar dates</label>
+          <label class="switch"><input id="show-calendar" type="checkbox" aria-controls="calendar-field" />Calendar dates</label>
           <div class="calendar-field" id="calendar-field" hidden>
             <div class="cadence-row">
               <span><strong id="cadence-summary"></strong></span>
@@ -191,7 +194,7 @@
         <section class="editor sure" id="sure-editor" aria-labelledby="sure-heading" hidden>
           <div class="editor-head">
             <h2 id="sure-heading" tabindex="-1">How sure is this?</h2>
-            <label class="switch"><input id="show-mc" type="checkbox" aria-label="On: How sure is this?" /><span class="track" aria-hidden="true"></span> On</label>
+            <label class="switch"><input id="show-mc" type="checkbox" aria-label="On: How sure is this?" />On</label>
           </div>
           <div class="field" id="mc-field">
             <label for="lr-sd">Learning-rate uncertainty (± percentage points, 1σ)</label>
