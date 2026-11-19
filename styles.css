@@ -482,6 +482,46 @@ h1 {
   flex-basis: 100%;
 }
 
+/* Mobile-only row under the headline that leads to the Go deeper cards. */
+.go-deeper-link {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  text-decoration: none;
+}
+
+.go-deeper-title {
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.go-deeper-preview {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+@media (min-width: 61rem) {
+  .go-deeper-link {
+    display: none;
+  }
+}
+
+/* The heading takes focus after the Go deeper link moves the page; mouse and touch users get no ring. */
+.deeper .section-title:focus {
+  outline: none;
+}
+
+.deeper .section-title:focus-visible {
+  outline: 3px solid var(--focus);
+}
+
 .chart-panel,
 .core,
 .deeper {
