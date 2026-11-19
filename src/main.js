@@ -218,6 +218,7 @@ function update() {
   // In uncertainty mode the median replaces the single-learning-rate curve as the line.
   renderChart(chart, mc ? mc.bands.p50 : series, {
     logScale: controls.scaleLog.getAttribute('aria-pressed') === 'true', target, bands: mc?.bands, calendar,
+    maxHeight: chartRoom(),
   });
 
   const finalCost = series[series.length - 1].cost;
@@ -504,6 +505,19 @@ controls.reset.addEventListener('click', () => {
   if (controls.moreInputsToggle.checkVisibility()) controls.moreInputsToggle.focus();
 });
 
+// On the fixed-height desktop workspace the chart may grow into the centre panel's unused
+// height: the room is the chart's current height plus whatever the panel has left over.
+// Elsewhere (mobile, short windows) the page scrolls and the chart keeps its default height.
+const desktopWorkspace = window.matchMedia('(min-width: 61rem) and (min-height: 700px)');
+function chartRoom() {
+  if (!desktopWorkspace.matches) return null;
+  const style = getComputedStyle(chartPanel);
+  const inner = chartPanel.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom);
+  const kids = [...chartPanel.children].filter((child) => child.checkVisibility());
+  const used = kids.at(-1).getBoundingClientRect().bottom - kids[0].getBoundingClientRect().top;
+  return chart.getBoundingClientRect().height + inner - used - 2;
+}
+
 // The chart sizes itself to its container, so redraw whenever the container's width
 // changes (window resize, scrollbar appearing, layout reflow), at most once per frame.
 let lastPanelWidth = 0;
@@ -515,6 +529,10 @@ new ResizeObserver(([entry]) => {
   cancelAnimationFrame(pendingFrame);
   pendingFrame = requestAnimationFrame(update);
 }).observe(chartPanel);
+// The room above depends on the window height and on whether the chart help is open.
+const scheduleUpdate = () => { cancelAnimationFrame(pendingFrame); pendingFrame = requestAnimationFrame(update); };
+window.addEventListener('resize', scheduleUpdate);
+$('chart-help').addEventListener('toggle', scheduleUpdate);
 
 setDefaults();
 update();

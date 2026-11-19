@@ -25,18 +25,29 @@ function isPowerOfTwo(n) {
   return (n & (n - 1)) === 0;
 }
 
+// The SVG height for a given width. With maxHeight (the room the desktop panel has free),
+// the chart fills that room, but is never taller than MAX_ASPECT × its width (so it keeps a
+// chart-like shape on very tall windows) and never shorter than the default.
+const MAX_ASPECT = 0.75;
+export function chartHeight(width, plotTop, maxHeight = null) {
+  const base = Math.round(Math.min(Math.max(width * 0.6, 300), 440));
+  if (maxHeight === null) return base;
+  return Math.max(base, Math.min(Math.floor(maxHeight), Math.round(width * MAX_ASPECT)));
+}
+
 // series: [{ n, cost }, ...] with n running 1..N.
 // target (optional): { cost, perKg, launch } where cost is in $M and launch is the first
 // launch at or below it, or null when there is none to show (unreachable or past the limit).
 // bands (optional): Monte Carlo percentile curves { p5, p25, p75, p95 }, each shaped like
 // series. When given, series is the median curve and the target gap is not shaded.
+// maxHeight (optional): the height available to the SVG; see chartHeight.
 // calendar (optional): { label, ticks: [{ year, launch }, ...] } draws a calendar-year axis
 // along the top, with each year's tick at its (fractional) launch position. The caller
 // builds the label and ticks; the chart only draws them.
 export function renderChart(
   svg,
   series,
-  { logScale: useLog = false, target = null, bands = null, calendar = null } = {},
+  { logScale: useLog = false, target = null, bands = null, calendar = null, maxHeight = null } = {},
 ) {
   const maxLaunches = series[series.length - 1].n;
   const costs = series.map((p) => p.cost);
@@ -49,12 +60,12 @@ export function renderChart(
   let maxCost = Math.max(...costs);
 
   const width = Math.max(MIN_WIDTH, Math.round(svg.clientWidth || 720));
-  const height = Math.round(Math.min(Math.max(width * 0.6, 300), 440));
   const narrow = width < NARROW_WIDTH;
+  const plotTop = calendar ? CALENDAR_TOP : MARGIN.top;
+  const height = chartHeight(width, plotTop, maxHeight);
 
   const plotLeft = MARGIN.left;
   const plotRight = width - MARGIN.right;
-  const plotTop = calendar ? CALENDAR_TOP : MARGIN.top;
   const plotBottom = height - MARGIN.bottom;
 
   // The right axis shows the same costs in $/kg. It is a constant multiple of the left
