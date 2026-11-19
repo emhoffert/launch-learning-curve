@@ -62,6 +62,7 @@ const cards = {
 };
 const ui = { open: null };
 const core = $('core');
+const layout = document.querySelector('main');
 const moreInputsSummary = $('more-inputs-summary');
 const milestoneStripEl = $('milestone-strip');
 const milestoneTable = $('milestone-table');
@@ -181,9 +182,11 @@ function update() {
     // Keep the last valid chart on screen, dimmed so it reads as out of date.
     message.textContent = inputs.error;
     chartPanel.classList.add('stale');
+    layout.classList.add('stale');
     setCardStates(inputs.field);
     return;
   }
+  layout.classList.remove('stale');
   setCardStates(null);
   message.textContent = '';
   chartPanel.classList.remove('stale');
@@ -373,6 +376,10 @@ function fillCard(card, { label, value, sub }) {
 function setCardStates(errorField) {
   for (const [name, { card, toggle }] of Object.entries(cards)) {
     card.dataset.state = cardState({ active: toggle.checked, error: errorField === name });
+    // A card turned on while another input is invalid has no result yet: show a placeholder.
+    if (errorField && toggle.checked && !card.querySelector('.card-v').textContent) {
+      fillCard(card, { label: name === 'when' ? 'When' : 'How sure', value: '—', sub: 'waiting for valid inputs' });
+    }
   }
 }
 
@@ -485,6 +492,8 @@ for (const input of [controls.firstYear, controls.growth]) {
 controls.reset.addEventListener('click', () => {
   setDefaults();
   update();
+  // Reset collapses the inputs that hold this button on narrow layouts; keep focus on a visible control.
+  if (controls.moreInputsToggle.checkVisibility()) controls.moreInputsToggle.focus();
 });
 
 // The chart sizes itself to its container, so redraw whenever the container's width

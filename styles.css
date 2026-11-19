@@ -175,6 +175,9 @@ button:hover {
 
 .chart-panel.stale #chart,
 .chart-panel.stale .headline,
+main.stale .readouts,
+main.stale .calendar-table,
+main.stale .acard .card-result,
 .chart-panel.stale .milestone-strip {
   opacity: 0.35;
   transition: opacity 0.15s;
