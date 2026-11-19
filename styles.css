@@ -670,6 +670,7 @@ button {
   display: block;
   width: 100%;
   min-height: 96px;
+  height: 100%;
   padding: 12px;
   text-align: left;
   border-radius: 12px;
