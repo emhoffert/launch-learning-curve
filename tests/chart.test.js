@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { thinYearLabels, thinYearTicks } from '../src/chart.js';
+import { chartHeight, thinYearLabels, thinYearTicks } from '../src/chart.js';
 
 const labels = (out) => out.map((t) => t.label);
 
@@ -111,4 +111,14 @@ test('a 1 launch/year axis over 2,048 launches thins to spaced ticks and full-ye
   for (let i = 1; i < kept.length; i++) assert.ok(kept[i].px - kept[i - 1].px >= 2);
   const shown = thinYearLabels(kept, 36).filter((t) => t.label);
   assert.ok(shown.every((t) => /^\d{4}$/.test(t.label)), JSON.stringify(shown.map((t) => t.label)));
+});
+
+test('chartHeight: default without room, fills the room up to 3:4, never shorter', () => {
+  // 726px wide (1440 desktop centre column): default 436.
+  assert.equal(chartHeight(726, 20), 436);
+  assert.equal(chartHeight(726, 20, 500.7), 500); // fills the room
+  assert.equal(chartHeight(726, 20, 2000), 545); // capped at 0.75 × 726
+  assert.equal(chartHeight(726, 20, 300), 436); // little room: keep the default, don't shrink
+  assert.equal(chartHeight(966, 52, 670), 670); // MacBook Pro 16" window: fills the panel
+  assert.equal(chartHeight(358, 52), 300); // mobile: unchanged
 });
