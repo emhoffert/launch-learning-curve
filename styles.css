@@ -138,7 +138,7 @@ select {
   padding-left: 10px;
   border-left: 3px solid var(--border);
   color: var(--muted);
-  font-size: 0.85rem;
+  font-size: 0.875rem;
 }
 
 .cadence-note strong {
@@ -234,13 +234,13 @@ button:hover {
 .hint {
   margin: 0;
   color: var(--muted);
-  font-size: 0.85rem;
+  font-size: 0.875rem;
 }
 
 .mc-legend {
   margin: 0 0 12px;
   color: var(--muted);
-  font-size: 0.85rem;
+  font-size: 0.875rem;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -312,7 +312,7 @@ button:hover {
 .note {
   margin: 4px 0 16px;
   color: var(--muted);
-  font-size: 0.85rem;
+  font-size: 0.875rem;
 }
 
 .headline {
@@ -359,7 +359,7 @@ button:hover {
 
 .readouts dt {
   color: var(--muted);
-  font-size: 0.85rem;
+  font-size: 0.875rem;
 }
 
 .readouts dd {
@@ -409,7 +409,7 @@ button:hover {
 .calendar-table thead th {
   border-top: none;
   color: var(--muted);
-  font-size: 0.85rem;
+  font-size: 0.875rem;
   font-weight: 400;
 }
 
@@ -482,6 +482,7 @@ h1 {
 .chart-panel,
 .core,
 .deeper {
+  position: relative;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -513,7 +514,7 @@ h1 {
 .section-title {
   margin: 0;
   color: var(--muted);
-  font-size: 0.8rem;
+  font-size: 0.875rem;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -699,7 +700,7 @@ button {
 .acard .card-k,
 .acard .card-sub {
   color: var(--muted);
-  font-size: 0.85rem;
+  font-size: 0.875rem;
 }
 
 .acard .card-v {
@@ -865,7 +866,7 @@ button {
   }
 
   .seg button {
-    min-height: 40px;
+    min-height: 44px;
   }
 
   input[type='range'] {
